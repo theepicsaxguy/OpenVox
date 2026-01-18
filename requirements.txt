@@ -1,6 +1,7 @@
 flask
-torch
-torchaudio
+torch<=2.8.0
+torchaudio<=2.8.0
 pocket-tts
 scipy
 numpy
+soundfile
