@@ -49,10 +49,12 @@ if getattr(sys, 'frozen', False):
     # Default Voices Dir when frozen (bundled)
     # We will assume 'voices' is bundled into the root of the executable
     BUNDLE_VOICES_DIR = os.path.join(base_path, 'voices')
+    BUNDLE_MODEL_PATH = os.path.join(base_path, 'model', 'b6369a24.yaml')
 else:
     app = Flask(__name__)
     base_path = os.path.dirname(os.path.abspath(__file__))
     BUNDLE_VOICES_DIR = None
+    BUNDLE_MODEL_PATH = None
 
 # --- Helpers ---
 def get_voice_state(voice_id_or_path):
@@ -273,19 +275,15 @@ def main():
         model = TTSModel.load_model(variant=args.model_path)
     elif getattr(sys, 'frozen', False):
         # Check if model is bundled in 'model' dir
-        #bundled_model_dir = os.path.join(base_path, 'model')
-        #if os.path.isdir(bundled_model_dir):
-             #logger.info(f"Using bundled model from: {bundled_model_dir}")
-             # We assume the directory contains the necessary files and pass the directory path
-             # Depending on pocket-tts implementation, passing the dir might work if it looks for files inside
-             # However, load_model usually takes a variant name or a path to a specific file/dir?
-             # Let's assume passing the directory works if it contains the artifacts.
-             # Actually, looking at pocket-tts, usually one passes the safelytensors file or just the variant name.
-             # If we bundle it, we should find the .safetensors file?
-             # Usually load_model(variant=path) works. 
-             #model = TTSModel.load_model(variant=bundled_model_dir)
-        #else:
-        model = TTSModel.load_model()
+        if os.path.isfile(BUNDLE_MODEL_PATH):
+            logger.info(f"Using bundled model from: {BUNDLE_MODEL_PATH}")
+            try:
+                model = TTSModel.load_model(variant=BUNDLE_MODEL_PATH)
+            except Exception as e:
+                logging.error(f"Error trying to load models bundled with .exe: {e}. Returning to default model load.")
+                model = TTSModel.load_model()
+        else:
+            model = TTSModel.load_model()
     else:
         model = TTSModel.load_model()
         
