@@ -52,7 +52,7 @@ class Config:
             return True
         # Check cgroup for docker/containerd references
         try:
-            with open('/proc/1/cgroup', 'r') as f:
+            with open('/proc/1/cgroup') as f:
                 return any('docker' in line or 'containerd' in line for line in f)
         except (FileNotFoundError, PermissionError):
             return False

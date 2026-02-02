@@ -173,7 +173,7 @@ class TTSService:
         # Block potentially dangerous URL schemes (SSRF protection)
         if voice_id_or_path.startswith(('http://', 'https://')):
             raise ValueError(
-                f"URL scheme not allowed for security reasons: {voice_id_or_path[:50]}. "
+                f'URL scheme not allowed for security reasons: {voice_id_or_path[:50]}. '
                 "Use 'hf://' for HuggingFace models or provide a local file path."
             )
 
@@ -218,7 +218,10 @@ class TTSService:
         """
         # Block unsafe URL schemes first
         if voice_id_or_path.startswith(('http://', 'https://')):
-            return False, 'HTTP/HTTPS URLs are not allowed for security reasons. Use hf:// for HuggingFace models.'
+            return (
+                False,
+                'HTTP/HTTPS URLs are not allowed for security reasons. Use hf:// for HuggingFace models.',
+            )
 
         try:
             resolved = self._resolve_voice_path(voice_id_or_path)
