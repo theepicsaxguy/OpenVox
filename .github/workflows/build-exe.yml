@@ -6,7 +6,7 @@ name: Build Windows EXE
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
