@@ -54,6 +54,176 @@
             <a href="#" id="download-btn" class="download-link">Download Audio</a>
         </div>
     </div>
+
+    <!-- API Documentation -->
+    <div class="api-docs">
+        <h2>API Documentation</h2>
+        <p class="api-intro">OpenAI-compatible TTS API. Use any OpenAI TTS client by pointing it to this server.</p>
+
+        <!-- Health Endpoint -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <code class="path">/health</code>
+            </div>
+            <p class="endpoint-desc">Health check endpoint for container orchestration and monitoring.</p>
+            <div class="response-example">
+                <strong>Response:</strong>
+                <pre>{
+  "status": "healthy",
+  "model_loaded": true,
+  "device": "cpu",
+  "sample_rate": 24000
+}</pre>
+            </div>
+        </div>
+
+        <!-- List Voices Endpoint -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <code class="path">/v1/voices</code>
+            </div>
+            <p class="endpoint-desc">List all available voices (built-in and custom).</p>
+            <div class="response-example">
+                <strong>Response:</strong>
+                <pre>{
+  "object": "list",
+  "data": [
+    {"id": "alba", "name": "Alba", "object": "voice"},
+    {"id": "marius", "name": "Marius", "object": "voice"}
+  ]
+}</pre>
+            </div>
+        </div>
+
+        <!-- Generate Speech Endpoint -->
+        <div class="endpoint">
+            <div class="endpoint-header">
+                <span class="method post">POST</span>
+                <code class="path">/v1/audio/speech</code>
+            </div>
+            <p class="endpoint-desc">Generate speech audio from text. OpenAI-compatible endpoint.</p>
+
+            <div class="params-section">
+                <strong>Request Body (JSON):</strong>
+                <table class="params-table">
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Default</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>input</code></td>
+                            <td>string</td>
+                            <td>✓</td>
+                            <td>-</td>
+                            <td>The text to generate speech from (max 4096 chars)</td>
+                        </tr>
+                        <tr>
+                            <td><code>voice</code></td>
+                            <td>string</td>
+                            <td></td>
+                            <td><code>alba</code></td>
+                            <td>Voice ID, filename, or URL. See <code>/v1/voices</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>model</code></td>
+                            <td>string</td>
+                            <td></td>
+                            <td>-</td>
+                            <td>Ignored (for OpenAI compatibility)</td>
+                        </tr>
+                        <tr>
+                            <td><code>response_format</code></td>
+                            <td>string</td>
+                            <td></td>
+                            <td><code>mp3</code></td>
+                            <td>Audio format: <code>mp3</code>, <code>wav</code>, <code>pcm</code>, <code>opus</code>, <code>flac</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>stream</code></td>
+                            <td>boolean</td>
+                            <td></td>
+                            <td><code>true</code></td>
+                            <td>Enable streaming response for real-time playback</td>
+                        </tr>
+                        <tr>
+                            <td><code>speed</code></td>
+                            <td>number</td>
+                            <td></td>
+                            <td><code>1.0</code></td>
+                            <td>Playback speed (0.25 to 4.0)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="example-section">
+                <strong>Example Request (curl):</strong>
+                <pre>curl -X POST http://localhost:49112/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "Hello world!",
+    "voice": "alba",
+    "response_format": "mp3"
+  }' \
+  --output speech.mp3</pre>
+            </div>
+
+            <div class="example-section">
+                <strong>Example (Python with OpenAI client):</strong>
+                <pre>from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:49112/v1",
+    api_key="not-needed"
+)
+
+response = client.audio.speech.create(
+    model="tts-1",
+    voice="alba",
+    input="Hello world!"
+)
+response.stream_to_file("output.mp3")</pre>
+            </div>
+
+            <div class="response-example">
+                <strong>Response:</strong>
+                <p>Audio file in the requested format (binary stream).</p>
+                <p><strong>Content-Type:</strong> <code>audio/mpeg</code>, <code>audio/wav</code>, <code>audio/opus</code>, etc.</p>
+            </div>
+
+            <div class="error-section">
+                <strong>Error Response:</strong>
+                <pre>{
+  "error": "Missing required field: input"
+}</pre>
+            </div>
+        </div>
+
+        <!-- Built-in Voices Reference -->
+        <div class="voices-reference">
+            <h3>Built-in Voices</h3>
+            <p>These voices work without authentication:</p>
+            <div class="voice-chips">
+                <span class="voice-chip">alba</span>
+                <span class="voice-chip">marius</span>
+                <span class="voice-chip">javert</span>
+                <span class="voice-chip">jean</span>
+                <span class="voice-chip">fantine</span>
+                <span class="voice-chip">cosette</span>
+                <span class="voice-chip">eponine</span>
+                <span class="voice-chip">azelma</span>
+            </div>
+            <p class="voice-note">Custom voice cloning requires a <a href="https://huggingface.co/kyutai/pocket-tts" target="_blank">HuggingFace token</a>.</p>
+        </div>
+    </div>
 </div>
 
 <script src="/static/js/app.js"></script>
