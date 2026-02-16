@@ -86,7 +86,7 @@ class TTSService:
         try:
             if effective_path:
                 logger.info(f'Loading model from: {effective_path}')
-                self.model = TTSModel.load_model(variant=effective_path)
+                self.model = TTSModel.load_model(config=effective_path)
             else:
                 logger.info('Loading default model from HuggingFace...')
                 self.model = TTSModel.load_model()

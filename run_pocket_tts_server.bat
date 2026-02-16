@@ -43,7 +43,7 @@ if not "%INPUT_PORT%"=="" set "PORT=%INPUT_PORT%"
 
 :: 4. Model Path
 set "MODEL_PATH="
-set /p "INPUT_MODEL=Model Path/Variant (Optional, default=built-in): "
+set /p "INPUT_MODEL=Model Config Path (.yaml)/Variant Name (Optional, default=built-in): "
 if not "%INPUT_MODEL%"=="" set "MODEL_PATH=--model-path ^"%INPUT_MODEL%^""
 
 :: 5. Voices Directory
