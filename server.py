@@ -58,7 +58,7 @@ Environment Variables:
         type=str,
         default=Config.MODEL_PATH,
         dest='model_path',
-        help='Path to model file or variant name',
+        help='Path to model config file (.yaml) or variant name',
     )
     parser.add_argument(
         '--voices-dir',
