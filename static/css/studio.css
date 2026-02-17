@@ -1850,9 +1850,9 @@ input[type="range"]::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px 8px;
+  padding: 0 var(--space-6) var(--space-2);
   height: 56px;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .player-track-info {
@@ -2047,7 +2047,7 @@ input[type="range"]::-moz-range-thumb {
 
 /* Now Playing View */
 .view-hero.compact {
-  margin-bottom: 32px;
+  margin-bottom: var(--space-8);
   padding-top: 0;
 }
 
@@ -2058,16 +2058,16 @@ input[type="range"]::-moz-range-thumb {
 .now-playing-layout {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .current-track-card {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 40px;
+  padding: var(--space-10);
   display: flex;
-  gap: 32px;
+  gap: var(--space-8);
   align-items: center;
 }
 
@@ -2165,7 +2165,7 @@ input[type="range"]::-moz-range-thumb {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
-  padding: 24px;
+  padding: var(--space-6);
 }
 
 .queue-header {
@@ -2410,6 +2410,13 @@ input[type="range"]::-moz-range-thumb {
   line-height: 1.6;
 }
 
+.modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-5);
+  line-height: 1.5;
+}
+
 .shortcuts-grid {
   display: grid;
   gap: var(--space-3);
@@ -2579,6 +2586,22 @@ kbd {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0);
+  animation: ripple 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
 }
 
 /* ── Responsive ───────────────────────────────────────────────────── */

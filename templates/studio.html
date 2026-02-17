@@ -32,17 +32,17 @@
         <!-- Title bar (macOS style) -->
         <header class="title-bar">
             <div class="title-bar-left">
-                <button class="action-btn hamburger-btn" id="btn-hamburger" title="Toggle sidebar">
+                <button class="action-btn hamburger-btn" id="btn-hamburger" title="Toggle sidebar" aria-label="Toggle sidebar">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="3" y1="12" x2="21" y2="12"/>
                         <line x1="3" y1="6" x2="21" y2="6"/>
                         <line x1="3" y1="18" x2="21" y2="18"/>
                     </svg>
                 </button>
-                <div class="window-controls">
-                    <div class="window-btn close"></div>
-                    <div class="window-btn minimize"></div>
-                    <div class="window-btn maximize"></div>
+                <div class="window-controls" role="group" aria-label="Window controls">
+                    <div class="window-btn close" role="button" aria-label="Close"></div>
+                    <div class="window-btn minimize" role="button" aria-label="Minimize"></div>
+                    <div class="window-btn maximize" role="button" aria-label="Maximize"></div>
                 </div>
             </div>
             <div class="title-bar-center">
@@ -675,7 +675,7 @@
         </div>
 
         <!-- Player bar -->
-        <div class="player-container" id="player-bar" style="display:none">
+        <div class="player-container hidden" id="player-bar">
             <div class="player-visualization">
                 <canvas id="waveform-canvas"></canvas>
             </div>
@@ -688,21 +688,21 @@
 
                 <div class="player-center">
                     <div class="player-controls-center">
-                        <button class="control-btn" id="player-prev" title="Previous (P)">
+                        <button class="control-btn" id="player-prev" title="Previous (P)" aria-label="Previous chunk">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="19 20 9 12 19 4 19 20"/>
                                 <line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"/>
                             </svg>
                         </button>
                         
-                        <button class="control-btn skip-btn" id="player-skip-back" title="Back 10s">
+                        <button class="control-btn skip-btn" id="player-skip-back" title="Back 10s" aria-label="Skip back 10 seconds">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="11 17 6 12 11 7"/>
                             </svg>
                             <span class="skip-label">10</span>
                         </button>
 
-                        <button class="control-btn play-btn" id="player-play" title="Play/Pause (Space)">
+                        <button class="control-btn play-btn" id="player-play" title="Play/Pause (Space)" aria-label="Play or pause">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" id="play-icon">
                                 <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
@@ -712,14 +712,14 @@
                             </svg>
                         </button>
 
-                        <button class="control-btn skip-btn" id="player-skip-fwd" title="Forward 10s">
+                        <button class="control-btn skip-btn" id="player-skip-fwd" title="Forward 10s" aria-label="Skip forward 10 seconds">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polyline points="13 17 18 12 13 7"/>
                             </svg>
                             <span class="skip-label">10</span>
                         </button>
 
-                        <button class="control-btn" id="player-next" title="Next (N)">
+                        <button class="control-btn" id="player-next" title="Next (N)" aria-label="Next chunk">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 4 15 12 5 20 5 4"/>
                                 <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"/>
@@ -738,7 +738,7 @@
                 </div>
 
                 <div class="player-extras">
-                    <button class="control-btn" id="btn-expand-player" title="Expand player">
+                    <button class="control-btn" id="btn-expand-player" title="Expand player" aria-label="Expand fullscreen player">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15 3 21 3 21 9"/>
                             <polyline points="9 21 3 21 3 15"/>
@@ -746,7 +746,7 @@
                             <line x1="3" y1="21" x2="10" y2="14"/>
                         </svg>
                     </button>
-                    <button class="control-btn" id="btn-queue-toggle" title="View Queue (Q)">
+                    <button class="control-btn" id="btn-queue-toggle" title="View Queue (Q)" aria-label="Toggle queue">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="8" y1="6" x2="21" y2="6"/>
                             <line x1="8" y1="12" x2="21" y2="12"/>
@@ -758,7 +758,7 @@
                     </button>
                     <span class="chunk-counter" id="player-chunk-num"></span>
                     <div class="playback-speed-wrapper">
-                        <select id="playback-speed" class="speed-select" title="Playback speed">
+                        <select id="playback-speed" class="speed-select" title="Playback speed" aria-label="Playback speed">
                             <option value="0.5">0.5x</option>
                             <option value="0.75">0.75x</option>
                             <option value="1" selected>1x</option>
@@ -767,7 +767,7 @@
                             <option value="2">2x</option>
                         </select>
                     </div>
-                    <button class="control-btn" id="player-download" title="Download chunk">
+                    <button class="control-btn" id="player-download" title="Download chunk" aria-label="Download current chunk">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                             <polyline points="7 10 12 15 17 10"/>
@@ -960,11 +960,11 @@
     </div>
 
     <!-- Keyboard shortcuts modal -->
-    <div class="modal-overlay hidden" id="keyboard-modal">
+    <div class="modal-overlay hidden" id="keyboard-modal" role="dialog" aria-modal="true" aria-labelledby="keyboard-modal-title">
         <div class="modal">
             <div class="modal-header">
-                <h3>Keyboard Shortcuts</h3>
-                <button class="btn-icon modal-close" id="close-keyboard-modal">
+                <h3 id="keyboard-modal-title">Keyboard Shortcuts</h3>
+                <button class="btn btn-ghost modal-close" id="close-keyboard-modal" aria-label="Close">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"/>
                         <line x1="6" y1="6" x2="18" y2="18"/>
@@ -1007,11 +1007,11 @@
     </div>
 
     <!-- Regenerate Settings Modal -->
-    <div class="modal-overlay hidden" id="regen-settings-modal">
+    <div class="modal-overlay hidden" id="regen-settings-modal" role="dialog" aria-modal="true" aria-labelledby="regen-settings-title">
         <div class="modal">
             <div class="modal-header">
-                <h3>Regenerate with Settings</h3>
-                <button class="btn btn-ghost modal-close" id="regen-settings-close">
+                <h3 id="regen-settings-title">Regenerate with Settings</h3>
+                <button class="btn btn-ghost modal-close" id="regen-settings-close" aria-label="Close">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"/>
                         <line x1="6" y1="6" x2="18" y2="18"/>
@@ -1056,7 +1056,7 @@
     </div>
 
     <!-- Confirm dialog -->
-    <div class="modal-overlay hidden" id="confirm-modal">
+    <div class="modal-overlay hidden" id="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
         <div class="modal modal-sm">
             <div class="modal-header">
                 <h3 id="confirm-title">Confirm</h3>

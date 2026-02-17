@@ -94,26 +94,33 @@ export function confirm(title, message) {
         modal.classList.remove('hidden');
         
         // Focus the cancel button by default for safety
-        setTimeout(() => document.getElementById('confirm-cancel').focus(), 50);
+        setTimeout(() => {
+            document.getElementById('confirm-cancel').focus();
+            trapFocus(modal);
+        }, 50);
     });
 }
 
 function initConfirmDialog() {
+    const modal = document.getElementById('confirm-modal');
+    
     document.getElementById('confirm-ok').addEventListener('click', () => {
-        document.getElementById('confirm-modal').classList.add('hidden');
+        modal.classList.add('hidden');
+        modal._closeTrap?.();
         if (confirmResolve) confirmResolve(true);
         confirmResolve = null;
     });
     document.getElementById('confirm-cancel').addEventListener('click', () => {
-        document.getElementById('confirm-modal').classList.add('hidden');
+        modal.classList.add('hidden');
+        modal._closeTrap?.();
         if (confirmResolve) confirmResolve(false);
         confirmResolve = null;
     });
     
-    // Escape key to cancel
-    document.getElementById('confirm-modal').addEventListener('keydown', (e) => {
+    modal.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-            document.getElementById('confirm-modal').classList.add('hidden');
+            modal.classList.add('hidden');
+            modal._closeTrap?.();
             if (confirmResolve) confirmResolve(false);
             confirmResolve = null;
         }
@@ -127,6 +134,7 @@ function initKeyboardModal() {
     
     document.getElementById('btn-keyboard-help').addEventListener('click', () => {
         modal.classList.remove('hidden');
+        trapFocus(modal);
     });
     
     document.getElementById('close-keyboard-modal').addEventListener('click', () => {
@@ -144,11 +152,47 @@ function initKeyboardModal() {
         if (e.key === '?') {
             e.preventDefault();
             modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) trapFocus(modal);
         }
         if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
             modal.classList.add('hidden');
         }
     });
+}
+
+// ── Focus trapping for modals ────────────────────────────────────────
+
+function trapFocus(modal) {
+    const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusable.length) return;
+    
+    const firstFocusable = focusable[0];
+    const lastFocusable = focusable[focusable.length - 1];
+    
+    firstFocusable.focus();
+    
+    function handleTab(e) {
+        if (e.key !== 'Tab') return;
+        
+        if (e.shiftKey) {
+            if (document.activeElement === firstFocusable) {
+                e.preventDefault();
+                lastFocusable.focus();
+            }
+        } else {
+            if (document.activeElement === lastFocusable) {
+                e.preventDefault();
+                firstFocusable.focus();
+            }
+        }
+    }
+    
+    modal._trapHandler = handleTab;
+    modal.addEventListener('keydown', handleTab);
+    
+    modal._closeTrap = () => {
+        modal.removeEventListener('keydown', modal._trapHandler);
+    };
 }
 
 // ── Mobile Navigation & Bottom Sheet ────────────────────────────────
@@ -297,14 +341,7 @@ function initRippleEffect() {
         if (!btn) return;
         
         const ripple = document.createElement('span');
-        ripple.style.cssText = `
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(0);
-            animation: ripple 0.6s ease-out;
-            pointer-events: none;
-        `;
+        ripple.className = 'ripple';
         
         const rect = btn.getBoundingClientRect();
         const size = Math.max(rect.width, rect.height);
@@ -318,18 +355,6 @@ function initRippleEffect() {
         
         setTimeout(() => ripple.remove(), 600);
     });
-    
-    // Add ripple animation keyframes
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-    `;
-    document.head.appendChild(style);
 }
 
 // ── Sidebar & Drawer Toggle (Tablet/Mobile) ────────────────────────
