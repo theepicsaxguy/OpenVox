@@ -1,0 +1,584 @@
+/**
+ * Editor panel — import, source detail, episode detail views.
+ * Premium Edition with enhanced UX
+ */
+
+import * as api from './api.js';
+import * as state from './state.js';
+import { toast, confirm as confirmDialog } from './main.js';
+import { refreshTree } from './library.js';
+import { loadEpisode as playerLoadEpisode } from './player.js';
+
+// ── View switching ──────────────────────────────────────────────────
+
+function showView(name) {
+    document.querySelectorAll('.stage-view').forEach(v => v.classList.remove('active'));
+    const el = document.getElementById(`view-${name}`);
+    if (el) {
+        el.classList.add('active');
+        // Trigger animation
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        requestAnimationFrame(() => {
+            el.style.transition = 'all 0.4s ease';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        });
+    }
+}
+
+// ── Import view ─────────────────────────────────────────────────────
+
+function initImportView() {
+    // Method button switching
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.method-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            const tabContent = document.getElementById(`tab-${btn.dataset.tab}`);
+            if (tabContent) {
+                tabContent.classList.add('active');
+            }
+        });
+    });
+
+    // File dropzone
+    const dropzone = document.getElementById('file-dropzone');
+    const fileInput = document.getElementById('import-file');
+    
+    if (dropzone && fileInput) {
+        dropzone.addEventListener('click', () => fileInput.click());
+        
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+        
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                toast(`File selected: ${files[0].name}`, 'info');
+            }
+        });
+    }
+
+    // Segmented control for code rule
+    document.querySelectorAll('.segmented-control .segment').forEach(segment => {
+        segment.addEventListener('click', () => {
+            const parent = segment.closest('.segmented-control');
+            parent.querySelectorAll('.segment').forEach(s => s.classList.remove('active'));
+            segment.classList.add('active');
+            
+            const input = parent.nextElementSibling;
+            if (input && input.tagName === 'INPUT') {
+                input.value = segment.dataset.value;
+            }
+        });
+    });
+
+    // Preview clean
+    document.getElementById('btn-preview-clean').addEventListener('click', async () => {
+        const text = getImportText();
+        if (!text) return toast('Enter some text first', 'error');
+
+        const rule = document.getElementById('import-code-rule').value;
+        try {
+            const result = await api.previewClean(text, rule);
+            document.getElementById('preview-raw').textContent = text.substring(0, 5000);
+            document.getElementById('preview-cleaned').textContent = result.cleaned_text;
+            document.getElementById('raw-stats').textContent = `${text.length.toLocaleString()} chars`;
+            document.getElementById('cleaned-stats').textContent = `${result.cleaned_text.length.toLocaleString()} chars`;
+            
+            const preview = document.getElementById('clean-preview');
+            preview.classList.remove('hidden');
+            preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    });
+
+    // Close preview
+    document.getElementById('btn-close-preview').addEventListener('click', () => {
+        document.getElementById('clean-preview').classList.add('hidden');
+    });
+
+    // Import button
+    document.getElementById('btn-import').addEventListener('click', doImport);
+}
+
+function getImportText() {
+    const activeBtn = document.querySelector('.method-btn.active');
+    if (!activeBtn) return null;
+    const activeTab = activeBtn.dataset.tab;
+    if (activeTab === 'paste') return document.getElementById('import-text').value;
+    if (activeTab === 'url') return null;
+    return null;
+}
+
+async function doImport() {
+    const activeBtn = document.querySelector('.method-btn.active');
+    const activeTab = activeBtn ? activeBtn.dataset.tab : 'paste';
+    const rule = document.getElementById('import-code-rule').value;
+
+    try {
+        let result;
+        if (activeTab === 'paste') {
+            const text = document.getElementById('import-text').value.trim();
+            const title = document.getElementById('import-title').value.trim();
+            if (!text) return toast('Enter some text', 'error');
+            result = await api.createSourceFromText(text, title || undefined, rule);
+        } else if (activeTab === 'file') {
+            const fileInput = document.getElementById('import-file');
+            if (!fileInput.files.length) return toast('Select a file', 'error');
+            result = await api.createSourceFromFile(fileInput.files[0], rule);
+        } else if (activeTab === 'url') {
+            const url = document.getElementById('import-url').value.trim();
+            if (!url) return toast('Enter a URL', 'error');
+            result = await api.createSourceFromUrl(url, rule);
+        }
+
+        toast(`Imported: ${result.title}`, 'success');
+        refreshTree();
+        window.location.hash = `#review/${result.id}`;
+
+        // Clear form
+        document.getElementById('import-text').value = '';
+        document.getElementById('import-title').value = '';
+        document.getElementById('import-url').value = '';
+        document.getElementById('clean-preview').classList.add('hidden');
+
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+}
+
+// ── Review & Generate view ──────────────────────────────────────────
+
+async function loadReview(sourceId) {
+    state.set('currentSourceId', sourceId);
+    state.set('currentView', 'review');
+    showView('review');
+
+    try {
+        const source = await api.getSource(sourceId);
+
+        document.getElementById('review-title').textContent = source.title;
+        document.getElementById('review-breadcrumb').textContent = source.title;
+        document.getElementById('review-meta').innerHTML = `
+            <span class="pill">${source.source_type}</span>
+            <span class="pill">${source.cleaned_text.length.toLocaleString()} chars</span>
+        `;
+        document.getElementById('review-cleaned-text').textContent = source.cleaned_text;
+
+        // Populate voice selector
+        await populateVoiceSelect('review-voice');
+
+        // Apply settings defaults
+        const settings = state.get('settings');
+        if (settings.default_voice) {
+            document.getElementById('review-voice').value = settings.default_voice;
+        }
+        if (settings.default_strategy) {
+            document.getElementById('review-strategy').value = settings.default_strategy;
+        }
+        if (settings.default_max_chars) {
+            document.getElementById('review-max-chars').value = settings.default_max_chars;
+        }
+        if (settings.default_format) {
+            document.getElementById('review-format').value = settings.default_format;
+        }
+
+        // Hide chunk preview
+        document.getElementById('review-chunk-preview').classList.add('hidden');
+
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+
+    refreshTree();
+}
+
+function initReviewView() {
+    // Preview chunks
+    document.getElementById('btn-review-preview-chunks').addEventListener('click', async () => {
+        const id = state.get('currentSourceId');
+        const source = await api.getSource(id);
+        const strategy = document.getElementById('review-strategy').value;
+        const maxChars = parseInt(document.getElementById('review-max-chars').value);
+
+        try {
+            const result = await api.previewChunks(source.cleaned_text, strategy, maxChars);
+            renderChunkPreview(result.chunks, 'review');
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    });
+
+    // Generate episode
+    document.getElementById('btn-review-generate').addEventListener('click', async () => {
+        const sourceId = state.get('currentSourceId');
+        const btn = document.getElementById('btn-review-generate');
+        const originalContent = btn.innerHTML;
+        
+        // Loading state
+        btn.disabled = true;
+        btn.innerHTML = `
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+                <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"/>
+            </svg>
+            Generating...
+        `;
+        
+        const data = {
+            source_id: sourceId,
+            voice_id: document.getElementById('review-voice').value,
+            output_format: document.getElementById('review-format').value,
+            chunk_strategy: document.getElementById('review-strategy').value,
+            chunk_max_length: parseInt(document.getElementById('review-max-chars').value),
+        };
+
+        try {
+            const result = await api.createEpisode(data);
+            toast(`Episode created (${result.chunk_count} chunks). Generating...`, 'success');
+            refreshTree();
+            window.location.hash = `#episode/${result.id}`;
+        } catch (e) {
+            toast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalContent;
+        }
+    });
+}
+
+function renderChunkPreview(chunks, prefix = '') {
+    const container = document.getElementById(`${prefix}-chunk-list`);
+    container.innerHTML = '';
+    document.getElementById(`${prefix}-chunk-count`).textContent = chunks.length;
+    document.getElementById(`${prefix}-chunk-preview`).classList.remove('hidden');
+
+    for (const chunk of chunks) {
+        const card = document.createElement('div');
+        card.className = 'chunk-item';
+        card.innerHTML = `
+            <div class="chunk-header">
+                <span class="chunk-label">${chunk.label}</span>
+                <span class="chunk-stats">${chunk.text.length} chars</span>
+            </div>
+            <div class="chunk-preview-text">${escapeHtml(chunk.text.substring(0, 200))}${chunk.text.length > 200 ? '...' : ''}</div>
+        `;
+        container.appendChild(card);
+    }
+    
+    // Scroll to preview
+    document.getElementById(`${prefix}-chunk-preview`).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Source view ──────────────────────────────────────────────────────
+
+async function loadSource(sourceId) {
+    state.set('currentSourceId', sourceId);
+    state.set('currentView', 'source');
+    showView('source');
+
+    try {
+        const source = await api.getSource(sourceId);
+
+        document.getElementById('source-title').textContent = source.title;
+        document.getElementById('source-breadcrumb').textContent = source.title;
+        document.getElementById('source-meta').innerHTML = `
+            <span class="pill">${source.source_type}</span>
+            <span class="pill">${source.cleaned_text.length.toLocaleString()} chars</span>
+            <span class="pill">${new Date(source.created_at).toLocaleDateString()}</span>
+        `;
+        document.getElementById('source-cleaned-text').textContent = source.cleaned_text;
+
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+
+    refreshTree();
+}
+
+function initSourceView() {
+    // Re-clean
+    document.getElementById('btn-reclean').addEventListener('click', async () => {
+        const id = state.get('currentSourceId');
+        const rule = document.getElementById('source-reclean-rule').value;
+        try {
+            const result = await api.reCleanSource(id, rule);
+            document.getElementById('source-cleaned-text').textContent = result.cleaned_text;
+            toast('Text re-cleaned', 'success');
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    });
+
+    // Delete source
+    document.getElementById('btn-delete-source').addEventListener('click', async () => {
+        const id = state.get('currentSourceId');
+        const ok = await confirmDialog('Delete Source', 'Delete this source and all its episodes?');
+        if (ok) {
+            await api.deleteSource(id);
+            toast('Source deleted', 'info');
+            refreshTree();
+            window.location.hash = '#import';
+        }
+    });
+
+    // Generate button - redirect to review view
+    document.getElementById('btn-source-generate').addEventListener('click', async () => {
+        const id = state.get('currentSourceId');
+        if (id) {
+            window.location.hash = `#review/${id}`;
+        }
+    });
+}
+
+// ── Episode view ────────────────────────────────────────────────────
+
+let episodeRefreshInterval = null;
+
+async function loadEpisode(episodeId) {
+    state.set('currentEpisodeId', episodeId);
+    state.set('currentView', 'episode');
+    showView('episode');
+
+    clearInterval(episodeRefreshInterval);
+
+    try {
+        const episode = await api.getEpisode(episodeId);
+        renderEpisode(episode);
+
+        // Auto-refresh while generating
+        if (episode.status === 'pending' || episode.status === 'generating') {
+            episodeRefreshInterval = setInterval(async () => {
+                try {
+                    const fresh = await api.getEpisode(episodeId);
+                    renderEpisode(fresh);
+                    if (fresh.status !== 'pending' && fresh.status !== 'generating') {
+                        clearInterval(episodeRefreshInterval);
+                        refreshTree();
+                    }
+                } catch {}
+            }, 3000);
+        }
+    } catch (e) {
+        toast(e.message, 'error');
+    }
+
+    refreshTree();
+}
+
+function renderEpisode(episode) {
+    document.getElementById('episode-title').textContent = episode.title;
+    document.getElementById('episode-breadcrumb').textContent = episode.title;
+
+    const badge = document.getElementById('episode-status-badge');
+    badge.textContent = episode.status;
+    badge.className = `status-badge ${episode.status}`;
+
+    const duration = episode.total_duration_secs
+        ? formatTime(episode.total_duration_secs)
+        : '—';
+    document.getElementById('episode-meta').textContent =
+        `${episode.voice_id} · ${episode.chunk_strategy} · ${duration} · ${new Date(episode.created_at).toLocaleDateString()}`;
+
+    // Progress bar
+    const readyChunks = episode.chunks?.filter(c => c.status === 'ready').length || 0;
+    const totalChunks = episode.chunks?.length || 0;
+    const pct = totalChunks > 0 ? (readyChunks / totalChunks) * 100 : 0;
+    document.getElementById('episode-progress-fill').style.width = `${pct}%`;
+    document.getElementById('episode-progress-text').textContent = `${Math.round(pct)}%`;
+
+    // Chunks grid
+    const container = document.getElementById('episode-chunks');
+    container.innerHTML = '';
+
+    for (const chunk of (episode.chunks || [])) {
+        const card = document.createElement('div');
+        card.className = 'chunk-card';
+        if (state.get('playingEpisodeId') === episode.id &&
+            state.get('playingChunkIndex') === chunk.chunk_index) {
+            card.classList.add('playing');
+        }
+
+        card.innerHTML = `
+            <div class="chunk-card-header">
+                <span class="chunk-num">${chunk.chunk_index + 1}</span>
+                <span class="chunk-status ${chunk.status}">${chunk.status}</span>
+            </div>
+            <div class="chunk-text">${escapeHtml(chunk.text.substring(0, 150))}${chunk.text.length > 150 ? '...' : ''}</div>
+            <div class="chunk-footer">
+                <span class="chunk-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : '—'}</span>
+                <div class="chunk-actions">
+                    ${chunk.status === 'ready' ? `
+                        <button class="chunk-btn play-chunk" title="Play" data-index="${chunk.chunk_index}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                        </button>
+                    ` : ''}
+                    ${(chunk.status === 'error' || chunk.status === 'ready') ? `
+                        <button class="chunk-btn regen-chunk" title="Regenerate" data-index="${chunk.chunk_index}">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                            </svg>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        // Play handler
+        const playBtn = card.querySelector('.play-chunk');
+        if (playBtn) {
+            playBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                playerLoadEpisode(episode.id, chunk.chunk_index);
+            });
+        }
+
+        // Regenerate handler
+        const regenBtn = card.querySelector('.regen-chunk');
+        if (regenBtn) {
+            regenBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await api.regenerateChunk(episode.id, chunk.chunk_index);
+                toast('Chunk queued for regeneration', 'info');
+                loadEpisode(episode.id);
+            });
+        }
+
+        // Card click to play
+        card.addEventListener('click', () => {
+            if (chunk.status === 'ready') {
+                playerLoadEpisode(episode.id, chunk.chunk_index);
+            }
+        });
+
+        container.appendChild(card);
+    }
+}
+
+function initEpisodeView() {
+    document.getElementById('btn-regenerate-episode').addEventListener('click', async () => {
+        const id = state.get('currentEpisodeId');
+        const ok = await confirmDialog('Regenerate Episode', 'Regenerate all chunks? This will delete existing audio.');
+        if (ok) {
+            await api.regenerateEpisode(id);
+            toast('Episode queued for regeneration', 'info');
+            loadEpisode(id);
+        }
+    });
+
+    document.getElementById('btn-download-episode').addEventListener('click', () => {
+        const id = state.get('currentEpisodeId');
+        if (id) {
+            window.open(api.fullEpisodeAudioUrl(id), '_blank');
+        }
+    });
+
+    document.getElementById('btn-delete-episode').addEventListener('click', async () => {
+        const id = state.get('currentEpisodeId');
+        const ok = await confirmDialog('Delete Episode', 'Delete this episode and its audio?');
+        if (ok) {
+            await api.deleteEpisode(id);
+            toast('Episode deleted', 'info');
+            refreshTree();
+            window.location.hash = '#import';
+        }
+    });
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────
+
+async function populateVoiceSelect(selectId) {
+    let voices = state.get('voices');
+    if (!voices || !voices.length) {
+        voices = await api.listVoices();
+        state.set('voices', voices);
+    }
+
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const currentVal = sel.value;
+    sel.innerHTML = '';
+    for (const v of voices) {
+        const opt = document.createElement('option');
+        opt.value = v.id;
+        opt.textContent = `${v.name} (${v.type || 'builtin'})`;
+        sel.appendChild(opt);
+    }
+    if (currentVal) sel.value = currentVal;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatTime(secs) {
+    if (!secs || !isFinite(secs)) return '0:00';
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// ── Now Playing View ────────────────────────────────────────────────
+
+function loadNowPlaying() {
+    state.set('currentView', 'now-playing');
+    showView('now-playing');
+    refreshTree();
+    
+    // Update queue if already playing
+    if (state.get('playingEpisodeId')) {
+        import('./player.js').then(player => {
+            // Trigger queue update
+            player.loadEpisode(state.get('playingEpisodeId'), state.get('playingChunkIndex'));
+        });
+    }
+}
+
+// ── Router ──────────────────────────────────────────────────────────
+
+export function route(hash) {
+    const parts = hash.replace('#', '').split('/');
+
+    if (parts[0] === 'source' && parts[1]) {
+        loadSource(parts[1]);
+    } else if (parts[0] === 'review' && parts[1]) {
+        loadReview(parts[1]);
+    } else if (parts[0] === 'episode' && parts[1]) {
+        loadEpisode(parts[1]);
+    } else if (parts[0] === 'now-playing') {
+        loadNowPlaying();
+    } else {
+        state.set('currentView', 'import');
+        showView('import');
+        refreshTree();
+    }
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+
+export function init() {
+    initImportView();
+    initReviewView();
+    initSourceView();
+    initEpisodeView();
+}
+
+export { loadEpisode, populateVoiceSelect };

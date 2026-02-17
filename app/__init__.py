@@ -43,6 +43,11 @@ def create_app(config_overrides: dict = None) -> Flask:
 
     app.register_blueprint(api)
 
+    # Register studio blueprint + init DB
+    from app.studio import init_studio
+
+    init_studio(app)
+
     logger.info('Flask application created')
 
     return app

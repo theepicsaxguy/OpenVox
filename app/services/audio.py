@@ -55,10 +55,6 @@ def convert_audio(
     """
     buffer = io.BytesIO()
 
-    # Ensure tensor is CPU
-    if audio_tensor.is_cuda:
-        audio_tensor = audio_tensor.cpu()
-
     # Ensure 2D (channels, time)
     if audio_tensor.dim() == 1:
         audio_tensor = audio_tensor.unsqueeze(0)
@@ -127,9 +123,6 @@ def tensor_to_pcm_bytes(chunk_tensor: torch.Tensor) -> bytes:
     Returns:
         PCM audio bytes
     """
-    if chunk_tensor.is_cuda:
-        chunk_tensor = chunk_tensor.cpu()
-
     if chunk_tensor.dim() == 1:
         chunk_tensor = chunk_tensor.unsqueeze(0)
 
