@@ -407,8 +407,11 @@ function renderEpisode(episode) {
     const duration = episode.total_duration_secs
         ? formatTime(episode.total_duration_secs)
         : '—';
+    
+    // Show generation settings
+    const settings = `Voice: ${episode.voice_id} · ${episode.output_format || 'wav'} · Breathing: ${episode.breathing_intensity || 'normal'}`;
     document.getElementById('episode-meta').textContent =
-        `${episode.voice_id} · ${episode.chunk_strategy} · ${duration} · ${new Date(episode.created_at).toLocaleDateString()}`;
+        `${settings} · ${episode.chunk_strategy || 'auto'} · ${duration} · ${new Date(episode.created_at).toLocaleDateString()}`;
 
     // Progress bar
     const readyChunks = episode.chunks?.filter(c => c.status === 'ready').length || 0;
@@ -424,21 +427,21 @@ function renderEpisode(episode) {
     if (episode.status === 'pending') {
         genStageEl.textContent = 'Waiting in queue...';
         genStageEl.className = 'gen-stage';
-        genChunkInfoEl.textContent = '';
+        genChunkInfoEl.textContent = `${totalChunks} chunks to generate · ${episode.voice_id}`;
     } else if (episode.status === 'generating') {
         genStageEl.textContent = 'Generating audio...';
         genStageEl.className = 'gen-stage generating';
         // Find current chunk being generated
         const generatingChunk = episode.chunks?.find(c => c.status === 'generating');
         if (generatingChunk) {
-            genChunkInfoEl.textContent = `Processing chunk ${generatingChunk.chunk_index + 1} of ${totalChunks}`;
+            genChunkInfoEl.textContent = `Processing chunk ${generatingChunk.chunk_index + 1}/${totalChunks} · ${readyChunks + 1} of ${totalChunks} done`;
         } else {
             genChunkInfoEl.textContent = `${readyChunks} of ${totalChunks} chunks ready`;
         }
     } else if (episode.status === 'ready') {
         genStageEl.textContent = 'Complete!';
         genStageEl.className = 'gen-stage ready';
-        genChunkInfoEl.textContent = `${totalChunks} chunks · ${duration}`;
+        genChunkInfoEl.textContent = `${totalChunks} chunks · ${duration} · ${episode.voice_id}`;
     } else if (episode.status === 'error') {
         genStageEl.textContent = 'Generation failed';
         genStageEl.className = 'gen-stage error';

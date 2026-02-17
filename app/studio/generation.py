@@ -146,7 +146,7 @@ class GenerationQueue:
 
             # Get episode config
             episode = db.execute(
-                'SELECT voice_id, output_format, breathing_intensity FROM episodes WHERE id = ?',
+                'SELECT voice_id, output_format, breathing_intensity, title FROM episodes WHERE id = ?',
                 (episode_id,),
             ).fetchone()
 
@@ -156,6 +156,12 @@ class GenerationQueue:
             voice_id = episode['voice_id']
             output_format = episode['output_format']
             breathing_intensity = episode['breathing_intensity'] or 'normal'
+            episode_title = episode['title']
+
+            logger.info(f'Starting generation: "{episode_title}"')
+            logger.info(
+                f'  Voice: {voice_id}, Format: {output_format}, Breathing: {breathing_intensity}'
+            )
 
             # Prepare audio directory
             audio_dir = os.path.join(Config.STUDIO_AUDIO_DIR, episode_id)
@@ -167,7 +173,9 @@ class GenerationQueue:
             tts = get_tts_service()
             voice_state = tts.get_voice_state(voice_id)
 
+            total_chunks = len(chunks)
             total_duration = 0.0
+            completed_chunks = 0
 
             for chunk_row in chunks:
                 if self._cancel_flag.is_set():
@@ -178,6 +186,10 @@ class GenerationQueue:
                 chunk_id = chunk_row['id']
                 chunk_index = chunk_row['chunk_index']
                 chunk_text = chunk_row['text']
+
+                logger.info(
+                    f'Generating chunk {chunk_index + 1}/{total_chunks} ({completed_chunks + 1} of {total_chunks})'
+                )
 
                 try:
                     # Update chunk status
@@ -219,13 +231,15 @@ class GenerationQueue:
                     )
                     db.commit()
 
+                    completed_chunks += 1
+                    pct = (completed_chunks / total_chunks) * 100
                     logger.info(
-                        f'Chunk {chunk_index} of episode {episode_id}: '
-                        f'{len(chunk_text)} chars in {gen_time:.1f}s ({duration:.1f}s audio)'
+                        f'Chunk {chunk_index + 1}/{total_chunks} done ({completed_chunks}/{total_chunks}, {pct:.0f}%): '
+                        f'{len(chunk_text)} chars in {gen_time:.1f}s → {duration:.1f}s audio'
                     )
 
                 except Exception as e:
-                    logger.exception(f'Chunk {chunk_index} generation failed')
+                    logger.exception(f'Chunk {chunk_index + 1}/{total_chunks} failed')
                     db.execute(
                         'UPDATE chunks SET status = ?, error_message = ? WHERE id = ?',
                         ('error', str(e), chunk_id),
@@ -239,7 +253,9 @@ class GenerationQueue:
                 ('ready', total_duration, episode_id),
             )
             db.commit()
-            logger.info(f'Episode {episode_id} complete: {total_duration:.1f}s total audio')
+            logger.info(
+                f'Generation complete: "{episode_title}" - {total_chunks} chunks, {total_duration:.1f}s total audio'
+            )
 
     def _update_episode_status(self, episode_id: str, status: str):
         """Update episode status in DB."""
