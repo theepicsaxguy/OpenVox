@@ -168,3 +168,33 @@ JavaScript modules:
 - `settings.js` - Settings persistence, voice loading
 - `api.js` - API client
 - `state.js` - Simple pub/sub state management
+
+## Design Principles
+
+### SOLID Principles (Python)
+
+- **S**ingle Responsibility: Each module/class should do one thing well
+  - `routes.py` handles HTTP, `db.py` handles persistence, `generation.py` handles queue
+- **O**pen/Closed: Open for extension, closed for modification
+  - Add new chunking strategies without modifying existing code
+  - Add new cleaning options via options object, not if/else chains
+- **L**iskov Substitution: Subtypes should be substitutable for base types
+- **I**nterface Segregation: Prefer small, focused interfaces
+- **D**ependency Inversion: Depend on abstractions, not concretions
+  - Use service functions (`get_tts_service()`) rather than direct imports where appropriate
+
+### Code Reuse Guidelines
+
+Before writing new code, check if existing solutions exist:
+
+1. **Frontend utilities**: Check `main.js` for `escapeHtml`, `formatTime`, `toast`, `confirm`, etc.
+2. **State management**: Use `state.js` pub/sub - don't create new event systems
+3. **API calls**: Use `api.js` functions, add new endpoints there
+4. **CSS utilities**: Check existing classes in `studio.css` before adding new styles
+5. **Python utilities**: Check `app/studio/` for existing helpers before adding new modules
+
+Avoid:
+- Reinventing common patterns (modals, toasts, dropdowns already exist)
+- Duplicating similar logic in multiple places
+- Adding new state management when `state.js` suffices
+- Creating custom CSS when existing classes work
