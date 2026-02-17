@@ -171,10 +171,16 @@ def _clean_title(title: str) -> str:
     """Remove non-text characters from title."""
     import re
 
+    # Skip lines that are just markdown horizontal rules
+    if re.match(r'^[\-\*_]{3,}$', title.strip()):
+        return ''
+
     # Keep only alphanumeric, spaces, and basic punctuation
-    title = re.sub(r'[^\w\s\-.,!?\'"]', '', title)
+    title = re.sub(r'[^\w\s\-.,!?\'"]+', ' ', title)
     # Collapse multiple spaces
     title = re.sub(r'\s+', ' ', title)
+    # Remove leading/trailing hyphens
+    title = title.strip('-. ')
     return title.strip()
 
 
