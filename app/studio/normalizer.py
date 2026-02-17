@@ -54,6 +54,67 @@ ABBREVIATIONS = {
 }
 
 
+def _strip_html_tags(text: str) -> str:
+    """Strip all HTML/markdown tags from text while preserving content."""
+    # Remove HTML comments
+    text = re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
+
+    # Remove DOCTYPE declarations
+    text = re.sub(r'<!DOCTYPE[^>]*>', '', text, flags=re.IGNORECASE)
+
+    # Remove script and style blocks entirely
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.IGNORECASE | re.DOTALL)
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.IGNORECASE | re.DOTALL)
+
+    # Replace block elements with newlines
+    text = re.sub(r'<(br|hr|p|div|li|tr|td|th)[^>]*>', '\n', text, flags=re.IGNORECASE)
+
+    # Remove all remaining HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Remove markdown image syntax: ![alt](url)
+    text = re.sub(r'!\[([^\]]*)\]\([^\)]+\)', r'\1', text)
+
+    # Remove markdown link syntax: [text](url) - keep text only
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+
+    # Remove markdown headers: # ## ### etc
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+
+    # Remove markdown emphasis: **bold** *italic* __underline__ etc
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)
+    text = re.sub(r'__([^_]+)__', r'\1', text)
+    text = re.sub(r'_([^_]+)_', r'\1', text)
+
+    # Remove markdown code blocks: ```code```
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+
+    # Remove inline code: `code`
+    text = re.sub(r'`([^`]+)`', r'\1', text)
+
+    # Remove markdown list markers: - * 1. etc at start of line
+    text = re.sub(r'^[\-\*\+]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
+
+    # Remove horizontal rules: --- *** ___
+    text = re.sub(r'^[\-\*_]{3,}\s*$', '', text, flags=re.MULTILINE)
+
+    # Decode common HTML entities
+    text = re.sub(r'&nbsp;', ' ', text)
+    text = re.sub(r'&amp;', '&', text)
+    text = re.sub(r'&lt;', '<', text)
+    text = re.sub(r'&gt;', '>', text)
+    text = re.sub(r'&quot;', '"', text)
+    text = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), text)
+
+    # Clean up multiple whitespace and newlines
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = re.sub(r'[ \t]+', ' ', text)
+
+    return text.strip()
+
+
 def normalize_text(text: str, options: CleaningOptions | None = None) -> str:
     """
     Normalize text for TTS consumption with configurable rules.
@@ -67,6 +128,9 @@ def normalize_text(text: str, options: CleaningOptions | None = None) -> str:
     """
     if options is None:
         options = CleaningOptions()
+
+    # Pre-process: strip any HTML tags that might have slipped through
+    text = _strip_html_tags(text)
 
     try:
         from markdown_it import MarkdownIt
