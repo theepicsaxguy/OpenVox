@@ -507,9 +507,17 @@ function updateFullscreenUI() {
     if (chunk && chunk.text) {
         currentSubtitleText = chunk.text;
         subtitleSentences = chunk.text.split(/(?<=[.!?])\s+/);
+        
+        // Calculate estimated timing for each sentence based on word count
+        // Average speaking rate: ~2.5 words per second
+        subtitleTimings = subtitleSentences.map(sentence => {
+            const wordCount = sentence.split(/\s+/).length;
+            return wordCount / 2.5; // seconds per sentence
+        });
     } else {
         currentSubtitleText = '';
         subtitleSentences = [];
+        subtitleTimings = [];
     }
     
     // Update time displays
@@ -538,23 +546,29 @@ function updateSubtitles(text) {
 
 let currentSubtitleText = '';
 let subtitleSentences = [];
+let subtitleTimings = [];
 
 function updateSubtitlesSync() {
     if (!audio || !audio.duration || !currentSubtitleText) return;
     
     const currentTime = audio.currentTime;
-    const duration = audio.duration;
-    const progress = currentTime / duration;
     
-    // Calculate which sentence to show based on progress
-    const sentenceIndex = Math.min(
-        Math.floor(progress * subtitleSentences.length),
-        subtitleSentences.length - 1
-    );
+    // Find the current sentence based on elapsed time
+    let elapsedTime = 0;
+    let currentSentenceIndex = 0;
+    
+    for (let i = 0; i < subtitleTimings.length; i++) {
+        if (currentTime < elapsedTime + subtitleTimings[i]) {
+            currentSentenceIndex = i;
+            break;
+        }
+        elapsedTime += subtitleTimings[i];
+        currentSentenceIndex = i;
+    }
     
     const subtitleEl = $('fs-subtitle-text');
-    if (subtitleEl && subtitleSentences[sentenceIndex]) {
-        subtitleEl.textContent = subtitleSentences[sentenceIndex];
+    if (subtitleEl && subtitleSentences[currentSentenceIndex]) {
+        subtitleEl.textContent = subtitleSentences[currentSentenceIndex];
     }
 }
 
