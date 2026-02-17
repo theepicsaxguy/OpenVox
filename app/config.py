@@ -59,6 +59,12 @@ class Config:
 
     IS_DOCKER = _is_docker.__func__()
 
+    # Studio / Podcast data
+    STUDIO_DATA_DIR = os.environ.get('POCKET_TTS_DATA_DIR', str(BASE_PATH / 'data'))
+    STUDIO_DB_PATH = os.path.join(STUDIO_DATA_DIR, 'podcast_studio.db')
+    STUDIO_SOURCES_DIR = os.path.join(STUDIO_DATA_DIR, 'sources')
+    STUDIO_AUDIO_DIR = os.path.join(STUDIO_DATA_DIR, 'audio')
+
     # Logging
     LOG_LEVEL = os.environ.get('POCKET_TTS_LOG_LEVEL', 'INFO')
     LOG_DIR = os.environ.get('POCKET_TTS_LOG_DIR', str(BASE_PATH / 'logs'))

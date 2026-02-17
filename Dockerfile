@@ -26,6 +26,7 @@ FROM python:3.10-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     ffmpeg \
+    gosu \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
@@ -43,21 +44,23 @@ COPY --chown=pockettts:pockettts static/ ./static/
 COPY --chown=pockettts:pockettts templates/ ./templates/
 COPY --chown=pockettts:pockettts voices/ ./voices/
 COPY --chown=pockettts:pockettts server.py ./
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Create logs directory, and ensure app directory is owned by user
-RUN chown pockettts:pockettts /app && mkdir -p /app/logs && chown pockettts:pockettts /app/logs
+# Create logs and data directories, ensure ownership
+RUN chown pockettts:pockettts /app && \
+    mkdir -p /app/logs && chown pockettts:pockettts /app/logs && \
+    mkdir -p /app/data/sources /app/data/audio && chown -R pockettts:pockettts /app/data
 
 # Create HuggingFace cache directory (for volume mount)
 RUN mkdir -p /home/pockettts/.cache/huggingface && \
     chown -R pockettts:pockettts /home/pockettts/.cache
 
-# Switch to non-root user
-USER pockettts
-
 # Environment variables with defaults
 ENV POCKET_TTS_HOST=0.0.0.0 \
     POCKET_TTS_PORT=49112 \
     POCKET_TTS_VOICES_DIR=/app/voices \
+    POCKET_TTS_DATA_DIR=/app/data \
     POCKET_TTS_LOG_DIR=/app/logs \
     POCKET_TTS_LOG_LEVEL=INFO \
     PYTHONUNBUFFERED=1
@@ -68,6 +71,9 @@ EXPOSE 49112
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:49112/health')" || exit 1
+
+# Entrypoint fixes volume permissions then drops to non-root user
+ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Run server
 CMD ["python", "server.py"]
