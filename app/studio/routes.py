@@ -40,7 +40,12 @@ def register_routes(bp):
                     return jsonify({'error': 'No file selected'}), 400
             # URL import
             elif request.is_json and request.json.get('url'):
-                data = ingest_url(request.json['url'])
+                url_settings = request.json.get('url_settings', {})
+                data = ingest_url(
+                    request.json['url'],
+                    use_jina=url_settings.get('use_jina', True),
+                    jina_fallback=url_settings.get('jina_fallback', True),
+                )
                 req_settings = request.json.get('cleaning_settings', {})
                 settings.update(req_settings)
             # Paste
@@ -62,6 +67,10 @@ def register_routes(bp):
                 expand_abbreviations=settings.get('clean_expand_abbreviations', True),
                 code_block_rule=settings.get('code_block_rule', 'skip'),
                 preserve_parentheses=settings.get('clean_preserve_parentheses', True),
+                preserve_structure=settings.get('preserve_structure', True),
+                paragraph_spacing=settings.get('paragraph_spacing', 2),
+                section_spacing=settings.get('section_spacing', 3),
+                list_item_spacing=settings.get('list_item_spacing', 1),
             )
 
             cleaned = normalize_text(data['raw_text'], options)
@@ -198,6 +207,10 @@ def register_routes(bp):
             expand_abbreviations=data.get('expand_abbreviations', True),
             code_block_rule=data.get('code_block_rule', 'skip'),
             preserve_parentheses=data.get('preserve_parentheses', True),
+            preserve_structure=data.get('preserve_structure', True),
+            paragraph_spacing=data.get('paragraph_spacing', 2),
+            section_spacing=data.get('section_spacing', 3),
+            list_item_spacing=data.get('list_item_spacing', 1),
         )
         cleaned = normalize_text(source['raw_text'], options)
 
@@ -225,6 +238,10 @@ def register_routes(bp):
             expand_abbreviations=data.get('expand_abbreviations', True),
             code_block_rule=data.get('code_block_rule', 'skip'),
             preserve_parentheses=data.get('preserve_parentheses', True),
+            preserve_structure=data.get('preserve_structure', True),
+            paragraph_spacing=data.get('paragraph_spacing', 2),
+            section_spacing=data.get('section_spacing', 3),
+            list_item_spacing=data.get('list_item_spacing', 1),
         )
 
         cleaned = normalize_text(data['text'], options)

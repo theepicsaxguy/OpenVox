@@ -21,6 +21,10 @@ class CleaningOptions:
         expand_abbreviations: bool = True,
         code_block_rule: str = 'skip',
         preserve_parentheses: bool = True,
+        preserve_structure: bool = True,
+        paragraph_spacing: int = 2,
+        section_spacing: int = 3,
+        list_item_spacing: int = 1,
     ):
         self.remove_non_text = remove_non_text
         self.handle_tables = handle_tables
@@ -28,6 +32,10 @@ class CleaningOptions:
         self.expand_abbreviations = expand_abbreviations
         self.code_block_rule = code_block_rule
         self.preserve_parentheses = preserve_parentheses
+        self.preserve_structure = preserve_structure
+        self.paragraph_spacing = paragraph_spacing
+        self.section_spacing = section_spacing
+        self.list_item_spacing = list_item_spacing
 
 
 # Common abbreviations to expand
@@ -167,8 +175,11 @@ def normalize_text(text: str, options: CleaningOptions | None = None) -> str:
                     result.append(f'Code: {cleaned_code}')
             continue
 
-        # Skip heading markers but keep content
+        # Handle headings with section breaks
         if token.type == 'heading_open':
+            if options.preserve_structure and result:
+                # Add section break before heading
+                result.append('\n' * options.section_spacing)
             continue
         if token.type == 'heading_close':
             continue
@@ -185,19 +196,28 @@ def normalize_text(text: str, options: CleaningOptions | None = None) -> str:
                     result.append(line)
             continue
 
-        # Skip list markers
-        if token.type in (
-            'bullet_list_open',
-            'ordered_list_open',
-            'bullet_list_close',
-            'ordered_list_close',
-            'list_item_open',
-            'list_item_close',
-        ):
+        # Handle list structure
+        if token.type in ('bullet_list_open', 'ordered_list_open'):
+            if options.preserve_structure and result and not result[-1].endswith('\n'):
+                result.append('\n')
+            continue
+        if token.type in ('bullet_list_close', 'ordered_list_close'):
+            if options.preserve_structure:
+                result.append('\n')
+            continue
+        if token.type == 'list_item_open':
+            continue
+        if token.type == 'list_item_close':
+            if options.preserve_structure:
+                result.append('\n' * options.list_item_spacing)
             continue
 
-        # Skip paragraph markers
-        if token.type in ('paragraph_open', 'paragraph_close'):
+        # Handle paragraph breaks
+        if token.type == 'paragraph_open':
+            continue
+        if token.type == 'paragraph_close':
+            if options.preserve_structure and result:
+                result.append('\n' * options.paragraph_spacing)
             continue
 
         # Skip horizontal rules
@@ -212,11 +232,16 @@ def normalize_text(text: str, options: CleaningOptions | None = None) -> str:
     return _final_clean(output, options)
 
 
-def _process_inline(token, options: CleaningOptions) -> str:
+def _process_inline(
+    token, options: CleaningOptions, is_list_item: bool = False, list_index: int = 0
+) -> str:
     """Process inline token children into plain text."""
     if not token.children:
         content = token.content or ''
-        return _clean_text(content, options)
+        cleaned = _clean_text(content, options)
+        if is_list_item and options.preserve_structure:
+            return cleaned
+        return cleaned
 
     parts = []
     for child in token.children:
@@ -413,8 +438,13 @@ def _get_parent_type(tokens, target_token) -> str | None:
 def _final_clean(text: str, options: CleaningOptions) -> str:
     """Final whitespace normalization - preserve structure."""
 
-    # Only normalize excessive newlines (preserve paragraph breaks)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    if options.preserve_structure:
+        # Preserve intentional spacing - only collapse excessive newlines beyond section breaks
+        max_newlines = max(options.section_spacing, options.paragraph_spacing, 4)
+        text = re.sub(r'\n{%d,}' % (max_newlines + 1), '\n' * max_newlines, text)
+    else:
+        # Legacy behavior: normalize to double newlines
+        text = re.sub(r'\n{3,}', '\n\n', text)
 
     # Clean up spacing around punctuation (but not within words)
     text = re.sub(r'\s+([.,;:!?])', r'\1', text)
@@ -432,8 +462,10 @@ def _basic_normalize(text: str, options: CleaningOptions) -> str:
     lines = text.split('\n')
     result = []
     in_code_block = False
+    in_list = False
+    last_was_heading = False
 
-    for line in lines:
+    for i, line in enumerate(lines):
         stripped = line.strip()
 
         # Code block fences
@@ -464,6 +496,8 @@ def _basic_normalize(text: str, options: CleaningOptions) -> str:
                 cells = [c.strip() for c in stripped.split('|') if c.strip()]
                 if cells:
                     result.append('. '.join(cells))
+                    if options.preserve_structure:
+                        result.append('\n' * options.list_item_spacing)
             continue
 
         # Headings
@@ -471,23 +505,60 @@ def _basic_normalize(text: str, options: CleaningOptions) -> str:
             heading_text = stripped.lstrip('#').strip()
             cleaned = _clean_text(heading_text, options)
             if cleaned:
-                result.append(f'Section: {cleaned}.')
+                if options.preserve_structure:
+                    if result:
+                        result.append('\n' * options.section_spacing)
+                    result.append(cleaned)
+                    result.append('\n' * options.section_spacing)
+                else:
+                    result.append(f'Section: {cleaned}.')
+            last_was_heading = True
             continue
 
-        # Process inline elements
+        # List items
+        list_match = re.match(r'^[\-\*\+]\s+(.+)$', stripped)
+        ordered_match = re.match(r'^(\d+)\.\s+(.+)$', stripped)
+
+        if list_match or ordered_match:
+            if not in_list and options.preserve_structure and result and not last_was_heading:
+                result.append('\n')
+            in_list = True
+
+            content = list_match.group(1) if list_match else ordered_match.group(2)
+            line = _clean_text(content, options)
+
+            # Links and images
+            line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
+            line = re.sub(r'!\[([^\]]*)\]\([^)]+\)', r'(Image: \1)', line)
+            line = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', line)
+            line = re.sub(r'_{1,3}([^_]+)_{1,3}', r'\1', line)
+            line = re.sub(
+                r'`([^`]+)`',
+                lambda m: (
+                    _clean_code_content(m.group(1), options)
+                    if options.code_block_rule == 'read'
+                    else ''
+                ),
+                line,
+            )
+
+            if line:
+                result.append(line)
+                if options.preserve_structure:
+                    result.append('\n' * options.list_item_spacing)
+            continue
+        elif in_list and stripped and not (list_match or ordered_match):
+            # End of list
+            in_list = False
+            if options.preserve_structure:
+                result.append('\n')
+
+        # Process regular inline elements
         line = _clean_text(stripped, options)
-
-        # Links: [text](url) -> text (URL handled in _clean_text)
         line = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', line)
-
-        # Images: ![alt](url) -> (Image: alt)
         line = re.sub(r'!\[([^\]]*)\]\([^)]+\)', r'(Image: \1)', line)
-
-        # Bold/italic markers
         line = re.sub(r'\*{1,3}([^*]+)\*{1,3}', r'\1', line)
         line = re.sub(r'_{1,3}([^_]+)_{1,3}', r'\1', line)
-
-        # Inline code
         line = re.sub(
             r'`([^`]+)`',
             lambda m: (
@@ -500,12 +571,18 @@ def _basic_normalize(text: str, options: CleaningOptions) -> str:
 
         # Horizontal rules
         if re.match(r'^[-*_]{3,}$', stripped):
+            if options.preserve_structure and result:
+                result.append('\n' * options.section_spacing)
             continue
 
         if line:
             result.append(line)
+            if options.preserve_structure:
+                result.append('\n' * options.paragraph_spacing)
 
-    return _final_clean('\n\n'.join(result), options)
+        last_was_heading = False
+
+    return _final_clean(''.join(result), options)
 
 
 # Backward compatibility function

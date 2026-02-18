@@ -51,25 +51,97 @@ def ingest_file(file_storage) -> dict:
     }
 
 
-def ingest_url(url: str) -> dict:
+def ingest_url(url: str, use_jina: bool = True, jina_fallback: bool = True) -> dict:
     """
-    Ingest content from a URL using trafilatura.
+    Ingest content from a URL using jina.ai or trafilatura.
 
     Args:
         url: The URL to fetch and extract content from
+        use_jina: Whether to try jina.ai extraction first (returns markdown)
+        jina_fallback: Whether to fallback to trafilatura if jina.ai fails
 
     Returns:
         dict with title, raw_text, original_url, source_type
     """
-    if not url.startswith('https://'):
-        raise ValueError('Only HTTPS URLs are allowed for security.')
+    if not url.startswith(('https://', 'http://')):
+        raise ValueError('Only HTTP/HTTPS URLs are allowed for security.')
 
     if len(url) > 2048:
         raise ValueError('URL too long.')
 
     logger.info(f'Fetching URL: {url}')
 
-    # First, try to fetch with requests to check content type
+    # Try jina.ai first if enabled
+    if use_jina:
+        raw_text = _fetch_with_jina(url)
+        if raw_text:
+            logger.info(f'Extracted content using jina.ai ({len(raw_text)} chars)')
+            if len(raw_text) > MAX_FILE_SIZE:
+                raise ValueError(
+                    f'Extracted text too large ({len(raw_text)} bytes). Maximum: {MAX_FILE_SIZE} bytes.'
+                )
+            title = _extract_title_from_url(url, raw_text)
+            return {
+                'title': title,
+                'raw_text': raw_text,
+                'original_url': url,
+                'source_type': 'url_import',
+            }
+        elif not jina_fallback:
+            raise ValueError('Could not extract content using jina.ai and fallback is disabled.')
+        logger.info('jina.ai extraction failed, falling back to trafilatura')
+
+    # Fallback to trafilatura or direct fetch
+    raw_text = _fetch_with_trafilatura(url)
+
+    if not raw_text:
+        raise ValueError('Could not extract readable text from URL.')
+
+    if len(raw_text) > MAX_FILE_SIZE:
+        raise ValueError(
+            f'Extracted text too large ({len(raw_text)} bytes). Maximum: {MAX_FILE_SIZE} bytes.'
+        )
+
+    title = _extract_title_from_url(url, raw_text)
+
+    return {
+        'title': title,
+        'raw_text': raw_text,
+        'original_url': url,
+        'source_type': 'url_import',
+    }
+
+
+def _fetch_with_jina(url: str) -> str | None:
+    """Fetch content using r.jina.ai/http://URL service."""
+    import requests
+
+    # Ensure URL has scheme for jina.ai
+    if url.startswith('https://'):
+        jina_url = f'https://r.jina.ai/{url[8:]}'
+    elif url.startswith('http://'):
+        jina_url = f'https://r.jina.ai/{url[7:]}'
+    else:
+        jina_url = f'https://r.jina.ai/{url}'
+
+    try:
+        response = requests.get(jina_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'})
+        response.raise_for_status()
+        content = response.text
+
+        # Check if jina.ai returned an error or empty content
+        if not content or content.strip() in ['', 'Error']:
+            return None
+
+        # jina.ai returns markdown, which is what we want
+        return content
+    except requests.RequestException as e:
+        logger.warning(f'jina.ai request failed: {e}')
+        return None
+
+
+def _fetch_with_trafilatura(url: str) -> str | None:
+    """Fetch content using trafilatura or direct request."""
     import requests
 
     try:
@@ -110,22 +182,7 @@ def ingest_url(url: str) -> dict:
         )
         logger.info('Extracted text from HTML using trafilatura')
 
-    if not raw_text:
-        raise ValueError('Could not extract readable text from URL.')
-
-    if len(raw_text) > MAX_FILE_SIZE:
-        raise ValueError(
-            f'Extracted text too large ({len(raw_text)} bytes). Maximum: {MAX_FILE_SIZE} bytes.'
-        )
-
-    title = _extract_title_from_url(url, raw_text)
-
-    return {
-        'title': title,
-        'raw_text': raw_text,
-        'original_url': url,
-        'source_type': 'url_import',
-    }
+    return raw_text
 
 
 def ingest_paste(text: str, title: str = None) -> dict:
