@@ -92,7 +92,7 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.50.0-noble
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
       options: --user root
     needs: [docker]
     # Only run E2E if we have access to pull the image (not on forks)
