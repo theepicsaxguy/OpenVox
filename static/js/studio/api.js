@@ -36,9 +36,11 @@ export function createSourceFromText(text, title, codeBlockRule) {
     }));
 }
 
-export function createSourceFromUrl(url, codeBlockRule) {
+export function createSourceFromUrl(url, codeBlockRule, urlExtractionMethod = 'jina') {
+    const useJina = urlExtractionMethod === 'jina';
     return request('/sources', jsonOpts('POST', {
         url,
+        url_settings: { use_jina: useJina, jina_fallback: false },
         cleaning_settings: { code_block_rule: codeBlockRule }
     }));
 }

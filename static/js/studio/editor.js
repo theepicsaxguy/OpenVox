@@ -229,7 +229,8 @@ async function doImport() {
         } else if (activeTab === 'url') {
             const url = document.getElementById('import-url').value.trim();
             if (!url) return toast('Enter a URL', 'error');
-            result = await api.createSourceFromUrl(url, rule);
+            const urlExtractionMethod = (settings.url_extraction_method || 'jina');
+            result = await api.createSourceFromUrl(url, rule, urlExtractionMethod);
         } else if (activeTab === 'git') {
             const url = document.getElementById('import-git-url').value.trim();
             if (!url) return toast('Enter a git repository URL', 'error');

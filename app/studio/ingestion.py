@@ -133,11 +133,24 @@ def _fetch_with_jina(url: str) -> str | None:
         if not content or content.strip() in ['', 'Error']:
             return None
 
+        # Extract only content below "Markdown Content:" if present
+        # jina.ai sometimes returns metadata before the markdown content
+        content = _extract_markdown_content(content)
+
         # jina.ai returns markdown, which is what we want
         return content
     except requests.RequestException as e:
         logger.warning(f'jina.ai request failed: {e}')
         return None
+
+
+def _extract_markdown_content(text: str) -> str:
+    """Extract content below 'Markdown Content:' header if present."""
+    marker = 'Markdown Content:'
+    idx = text.find(marker)
+    if idx != -1:
+        return text[idx + len(marker) :].lstrip('\n\r')
+    return text
 
 
 def _fetch_with_jina_with_title(url: str) -> tuple[str | None, str | None]:

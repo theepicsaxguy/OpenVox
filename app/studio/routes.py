@@ -291,7 +291,10 @@ def register_routes(bp):
                 if not url:
                     return jsonify({'error': 'URL is required'}), 400
 
-                result = ingest_url(url, use_jina=True, jina_fallback=True)
+                url_extraction = settings.get('url_extraction_method', 'jina')
+                use_jina = url_extraction == 'jina'
+
+                result = ingest_url(url, use_jina=use_jina, jina_fallback=False)
                 cleaned = normalize_text(result['raw_text'], options)
 
                 return jsonify(
@@ -1267,7 +1270,7 @@ def register_routes(bp):
     def _get_cleaning_settings(db):
         """Get user's cleaning settings from database."""
         rows = db.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'clean_%' OR key = 'code_block_rule'"
+            "SELECT key, value FROM settings WHERE key LIKE 'clean_%' OR key = 'code_block_rule' OR key = 'url_extraction_method'"
         ).fetchall()
         return {r['key']: r['value'] for r in rows}
 
