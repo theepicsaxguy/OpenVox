@@ -33,7 +33,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository.to_lower() }}
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -44,12 +44,17 @@ jobs:
     outputs:
       image_tag: ${{ steps.output.outputs.image_tag }}
       new_version: ${{ steps.version.outputs.new_version }}
+      image_name: ${{ steps.repo.outputs.name }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Normalize repository name
+        id: repo
+        run: echo "name=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Determine version
         id: version
@@ -108,10 +113,10 @@ jobs:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.new_version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:latest
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ steps.version.outputs.new_version }}
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:main
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -120,6 +125,6 @@ jobs:
         id: output
         run: |
           # Use the explicit version tag
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.new_version }}"
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:${{ steps.version.outputs.new_version }}"
           echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
           echo "Image tag: ${IMAGE_TAG}"
