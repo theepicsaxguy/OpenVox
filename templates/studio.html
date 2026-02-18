@@ -766,7 +766,34 @@
                 </div>
 
                 <div class="player-extras">
-                    <button class="control-btn" id="btn-expand-player" title="Expand player" aria-label="Expand fullscreen player">
+                    <button class="control-btn" id="btn-sleep-timer" title="Sleep Timer (S)" aria-label="Sleep timer">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span id="sleep-timer-indicator" class="sleep-timer-indicator"></span>
+                    </button>
+                    <button class="control-btn" id="btn-mute" title="Mute (M)" aria-label="Mute">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mute-icon">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="unmute-icon" style="display:none">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                            <line x1="23" y1="9" x2="17" y2="15"/>
+                            <line x1="17" y1="9" x2="23" y2="15"/>
+                        </svg>
+                    </button>
+                    <button class="control-btn" id="btn-share" title="Share" aria-label="Share episode">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                    </button>
+                    <button class="control-btn" id="btn-expand-player" title="Expand player (F)" aria-label="Expand fullscreen player">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="15 3 21 3 21 9"/>
                             <polyline points="9 21 3 21 3 15"/>
@@ -792,7 +819,10 @@
                             <option value="1" selected>1x</option>
                             <option value="1.25">1.25x</option>
                             <option value="1.5">1.5x</option>
+                            <option value="1.75">1.75x</option>
                             <option value="2">2x</option>
+                            <option value="2.5">2.5x</option>
+                            <option value="3">3x</option>
                         </select>
                     </div>
                     <button class="control-btn" id="player-download" title="Download chunk" aria-label="Download current chunk">
@@ -940,7 +970,10 @@
                             <option value="1" selected>1x</option>
                             <option value="1.25">1.25x</option>
                             <option value="1.5">1.5x</option>
+                            <option value="1.75">1.75x</option>
                             <option value="2">2x</option>
+                            <option value="2.5">2.5x</option>
+                            <option value="3">3x</option>
                         </select>
                     </div>
                 </div>

@@ -316,6 +316,11 @@ function onMetadataLoaded() {
 }
 
 function onEnded() {
+    // Add to playback history when episode finishes
+    if (currentEpisode) {
+        addToHistory({ ...currentEpisode, percent_listened: 100 });
+    }
+
     // Auto-advance to next chunk
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx >= 0 && idx < chunks.length - 1) {
@@ -329,6 +334,7 @@ function onEnded() {
         stopWaveformAnimation();
         drawWaveform();
         updateNowPlayingView();
+        triggerHaptic('success');
     }
 }
 
@@ -619,6 +625,242 @@ function formatTime(secs) {
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ── Haptic Feedback (Mobile) ───────────────────────────────────────────
+
+function triggerHaptic(type = 'light') {
+    if (!('vibrate' in navigator)) return;
+
+    const patterns = {
+        light: 10,
+        medium: 25,
+        heavy: 50,
+        success: [10, 50, 10],
+        error: [50, 50, 50],
+    };
+
+    navigator.vibrate(patterns[type] || patterns.light);
+}
+
+// ── Swipe Gestures (Mobile) ───────────────────────────────────────────
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+
+function initSwipeGestures() {
+    const playerContainer = document.getElementById('player-bar');
+    const fullscreenPlayer = document.getElementById('fullscreen-player');
+
+    function handleSwipe(startX, endX, startY, endY, element) {
+        const diffX = endX - startX;
+        const diffY = endY - startY;
+        const absX = Math.abs(diffX);
+        const absY = Math.abs(diffY);
+
+        // Only trigger if horizontal swipe is dominant
+        if (absX < absY) return;
+
+        const minSwipe = 50;
+        const maxTime = 500;
+
+        if (absX > minSwipe && touchStartTime < maxTime) {
+            if (diffX > 0) {
+                // Swipe right - previous
+                triggerHaptic('light');
+                prevChunk();
+            } else {
+                // Swipe left - next
+                triggerHaptic('light');
+                nextChunk();
+            }
+        }
+    }
+
+    // Mini player swipe
+    if (playerContainer) {
+        playerContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+        }, { passive: true });
+
+        playerContainer.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            handleSwipe(touchStartX, endX, touchStartY, endY, playerContainer);
+        }, { passive: true });
+    }
+
+    // Fullscreen player swipe
+    if (fullscreenPlayer) {
+        fullscreenPlayer.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+        }, { passive: true });
+
+        fullscreenPlayer.addEventListener('touchend', (e) => {
+            const endX = e.changedTouches[0].clientX;
+            const endY = e.changedTouches[0].clientY;
+            handleSwipe(touchStartX, endX, touchStartY, endY, fullscreenPlayer);
+        }, { passive: true });
+    }
+}
+
+// ── Sleep Timer ─────────────────────────────────────────────────────────
+
+let sleepTimerId = null;
+let sleepTimerRemaining = 0;
+
+function showSleepTimerMenu() {
+    const options = [
+        { label: '15 minutes', value: 15 * 60 },
+        { label: '30 minutes', value: 30 * 60 },
+        { label: '45 minutes', value: 45 * 60 },
+        { label: '1 hour', value: 60 * 60 },
+        { label: 'End of chapter', value: -1 },
+    ];
+
+    const actions = options.map(opt => ({
+        label: opt.label,
+        action: () => setSleepTimer(opt.value),
+    }));
+
+    if (sleepTimerId) {
+        actions.push({ sep: true });
+        actions.push({
+            label: 'Cancel timer',
+            danger: true,
+            action: cancelSleepTimer,
+        });
+    }
+
+    window.openBottomSheet('Sleep Timer', actions);
+}
+
+function setSleepTimer(seconds) {
+    cancelSleepTimer();
+
+    if (seconds === -1) {
+        // End of chapter - calculate time remaining in current chunk
+        if (audio && audio.duration) {
+            seconds = Math.ceil(audio.duration - audio.currentTime);
+        } else {
+            toast('No audio playing', 'error');
+            return;
+        }
+    }
+
+    sleepTimerRemaining = seconds;
+    updateSleepTimerUI();
+
+    sleepTimerId = setInterval(() => {
+        sleepTimerRemaining--;
+        updateSleepTimerUI();
+
+        if (sleepTimerRemaining <= 0) {
+            cancelSleepTimer();
+            audio?.pause();
+            savePosition();
+            triggerHaptic('success');
+            toast('Sleep timer ended', 'info');
+        }
+    }, 1000);
+
+    toast(`Sleep timer: ${formatTime(seconds)}`, 'info');
+    triggerHaptic('medium');
+}
+
+function cancelSleepTimer() {
+    if (sleepTimerId) {
+        clearInterval(sleepTimerId);
+        sleepTimerId = null;
+        sleepTimerRemaining = 0;
+        updateSleepTimerUI();
+    }
+}
+
+function updateSleepTimerUI() {
+    const timerEl = document.getElementById('sleep-timer-indicator');
+    if (timerEl) {
+        if (sleepTimerRemaining > 0) {
+            timerEl.textContent = formatTime(sleepTimerRemaining);
+            timerEl.classList.add('active');
+        } else {
+            timerEl.textContent = '';
+            timerEl.classList.remove('active');
+        }
+    }
+}
+
+// ── Share Functionality ────────────────────────────────────────────────
+
+function shareEpisode() {
+    if (!currentEpisode) return;
+
+    const shareData = {
+        title: currentEpisode.title,
+        text: `Listen to "${currentEpisode.title}"`,
+        url: window.location.href,
+    };
+
+    if (navigator.share) {
+        navigator.share(shareData)
+            .then(() => triggerHaptic('success'))
+            .catch(() => {});
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href)
+            .then(() => {
+                toast('Link copied to clipboard', 'info');
+                triggerHaptic('success');
+            })
+            .catch(() => {
+                toast('Failed to copy link', 'error');
+            });
+    }
+}
+
+// ── Playback History ────────────────────────────────────────────────────
+
+const HISTORY_KEY = 'pocket_tts_playback_history';
+const MAX_HISTORY = 50;
+
+function addToHistory(episode) {
+    if (!episode) return;
+
+    let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+
+    // Remove if already exists
+    history = history.filter(h => h.id !== episode.id);
+
+    // Add to front
+    history.unshift({
+        id: episode.id,
+        title: episode.title,
+        playedAt: Date.now(),
+        progress: episode.percent_listened || 0,
+    });
+
+    // Limit size
+    if (history.length > MAX_HISTORY) {
+        history = history.slice(0, MAX_HISTORY);
+    }
+
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    state.emit('history-updated', history);
+}
+
+export function getPlaybackHistory() {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+}
+
+function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY);
+    state.emit('history-updated', []);
+    toast('Playback history cleared', 'info');
+}
+
 // ── Playback position persistence ───────────────────────────────────
 
 function savePosition(forcePct) {
@@ -684,6 +926,32 @@ function nextChunk() {
     }
 }
 
+let isMuted = false;
+let previousVolume = 1;
+
+function toggleMute() {
+    if (!audio) return;
+
+    if (isMuted) {
+        audio.volume = previousVolume;
+        isMuted = false;
+    } else {
+        previousVolume = audio.volume || 1;
+        audio.volume = 0;
+        isMuted = true;
+    }
+
+    updateMuteUI();
+    toast(isMuted ? 'Muted' : 'Unmuted', 'info');
+}
+
+function updateMuteUI() {
+    const muteBtn = document.getElementById('btn-mute');
+    if (muteBtn) {
+        muteBtn.classList.toggle('muted', isMuted);
+    }
+}
+
 function showQueue() {
     window.location.hash = '#now-playing';
 }
@@ -696,6 +964,9 @@ export function init() {
 
     // Initialize fullscreen player
     initFullscreenPlayer();
+
+    // Initialize swipe gestures
+    initSwipeGestures();
 
     // Handle resize with debounce
     let resizeTimeout;
@@ -765,6 +1036,29 @@ export function init() {
         queueBtn.addEventListener('click', showQueue);
     }
 
+    // Sleep timer
+    const sleepTimerBtn = document.getElementById('btn-sleep-timer');
+    if (sleepTimerBtn) {
+        sleepTimerBtn.addEventListener('click', showSleepTimerMenu);
+    }
+
+    // Mute button
+    const muteBtn = document.getElementById('btn-mute');
+    if (muteBtn) {
+        muteBtn.addEventListener('click', () => {
+            toggleMute();
+            triggerHaptic('light');
+        });
+    }
+
+    // Share button
+    const shareBtn = document.getElementById('btn-share');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', () => {
+            shareEpisode();
+        });
+    }
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         // Don't capture when typing in inputs
@@ -774,6 +1068,7 @@ export function init() {
         case ' ':
             e.preventDefault();
             togglePlay();
+            triggerHaptic('light');
             break;
         case 'ArrowLeft':
             e.preventDefault();
@@ -794,6 +1089,44 @@ export function init() {
         case 'q':
         case 'Q':
             showQueue();
+            break;
+        case 'f':
+        case 'F':
+            if (!isFullscreen) {
+                openFullscreenPlayer();
+            } else {
+                closeFullscreenPlayer();
+            }
+            break;
+        case 'm':
+        case 'M':
+            toggleMute();
+            break;
+        case 's':
+        case 'S':
+            if (e.shiftKey) {
+                showSleepTimerMenu();
+            } else {
+                // s without shift - save position
+                savePosition();
+                toast('Position saved', 'info');
+            }
+            break;
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+            // Number keys for seek (0 = 0%, 9 = 90%)
+            if (audio && audio.duration) {
+                const percent = parseInt(e.key) * 10;
+                audio.currentTime = (percent / 100) * audio.duration;
+            }
             break;
         }
     });
