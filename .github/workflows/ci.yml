@@ -117,28 +117,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Determine image tag
-        id: image
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            TAG="pr-${{ github.event.number }}"
-          else
-            TAG="${{ github.ref_name }}"
-          fi
-          echo "tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}" >> $GITHUB_OUTPUT
-          echo "Using image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${TAG}"
-
       - name: Pull and run container
         run: |
-          docker pull ${{ steps.image.outputs.tag }}
+          docker pull ${{ needs.docker.outputs.image_tag }}
           docker run -d \
             --name pocket-tts \
             -p 49112:49112 \
             -e POCKET_TTS_HOST=0.0.0.0 \
             -e POCKET_TTS_PORT=49112 \
             -e POCKET_TTS_LOG_LEVEL=DEBUG \
-            ${{ steps.image.outputs.tag }}
-          
+            ${{ needs.docker.outputs.image_tag }}
+
           # Wait for server to be ready
           for i in {1..60}; do
             if curl -s http://localhost:49112/health > /dev/null 2>&1; then

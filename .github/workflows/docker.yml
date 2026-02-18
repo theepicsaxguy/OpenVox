@@ -42,7 +42,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+      image_tag: ${{ steps.output.outputs.image_tag }}
 
     steps:
       - name: Checkout code
@@ -84,4 +84,8 @@ jobs:
 
       - name: Output image tag
         id: output
-        run: echo "image_tag=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        run: |
+          # Get the first tag (branch or pr tag, not the sha tag)
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+          echo "image_tag=${FIRST_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Image tag: ${FIRST_TAG}"
