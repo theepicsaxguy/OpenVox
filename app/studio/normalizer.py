@@ -338,11 +338,11 @@ def _remove_non_text_chars(text: str, preserve_parentheses: bool = True) -> str:
     """Aggressively remove non-speech characters."""
 
     if preserve_parentheses:
-        # Characters to remove completely (excluding parentheses)
-        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\<\>\^\&\%\$\@\=\+\']'
+        # Characters to remove completely (excluding parentheses and apostrophes for contractions)
+        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\<\>\^\&\%\$\@\=\+]'
     else:
-        # Remove everything including parentheses
-        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\(\)\<\>\^\&\%\$\@\=\+\']'
+        # Remove everything including parentheses (but keep apostrophes for contractions)
+        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\(\)\<\>\^\&\%\$\@\=\+]'
 
     text = re.sub(remove_chars, ' ', text)
 
