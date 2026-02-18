@@ -34,8 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash pockettts
+# Create non-root user with explicit UID 1000 for K8s/dynamic UID compatibility
+RUN useradd --create-home --shell /bin/bash --uid 1000 pockettts
 WORKDIR /app
 
 # Copy application code

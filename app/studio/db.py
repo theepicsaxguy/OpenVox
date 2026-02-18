@@ -156,7 +156,8 @@ MIGRATIONS = [
         ('clean_remove_non_text', 'false'),
         ('clean_handle_tables', 'true'),
         ('clean_speak_urls', 'true'),
-        ('clean_expand_abbreviations', 'true');
+        ('clean_expand_abbreviations', 'true'),
+        ('clean_preserve_parentheses', 'true');
     """,
 ]
 

@@ -35,6 +35,7 @@ function applyToForm(settings) {
     $('setting-clean-speak-urls').checked = settings.clean_speak_urls === 'true';
     $('setting-clean-handle-tables').checked = settings.clean_handle_tables === 'true';
     $('setting-clean-expand-abbreviations').checked = settings.clean_expand_abbreviations === 'true';
+    $('setting-clean-preserve-parentheses').checked = settings.clean_preserve_parentheses !== 'false';
 
     // Subtitle settings
     $('setting-show-subtitles').checked = settings.show_subtitles !== 'false';
@@ -61,6 +62,7 @@ async function saveSettings() {
         clean_speak_urls: $('setting-clean-speak-urls').checked ? 'true' : 'false',
         clean_handle_tables: $('setting-clean-handle-tables').checked ? 'true' : 'false',
         clean_expand_abbreviations: $('setting-clean-expand-abbreviations').checked ? 'true' : 'false',
+        clean_preserve_parentheses: $('setting-clean-preserve-parentheses').checked ? 'true' : 'false',
 
         // Subtitle settings
         show_subtitles: $('setting-show-subtitles').checked ? 'true' : 'false',

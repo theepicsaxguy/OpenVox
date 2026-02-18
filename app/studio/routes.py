@@ -61,6 +61,7 @@ def register_routes(bp):
                 speak_urls=settings.get('clean_speak_urls', True),
                 expand_abbreviations=settings.get('clean_expand_abbreviations', True),
                 code_block_rule=settings.get('code_block_rule', 'skip'),
+                preserve_parentheses=settings.get('clean_preserve_parentheses', True),
             )
 
             cleaned = normalize_text(data['raw_text'], options)
@@ -196,6 +197,7 @@ def register_routes(bp):
             speak_urls=data.get('speak_urls', True),
             expand_abbreviations=data.get('expand_abbreviations', True),
             code_block_rule=data.get('code_block_rule', 'skip'),
+            preserve_parentheses=data.get('preserve_parentheses', True),
         )
         cleaned = normalize_text(source['raw_text'], options)
 
@@ -222,6 +224,7 @@ def register_routes(bp):
             speak_urls=data.get('speak_urls', True),
             expand_abbreviations=data.get('expand_abbreviations', True),
             code_block_rule=data.get('code_block_rule', 'skip'),
+            preserve_parentheses=data.get('preserve_parentheses', True),
         )
 
         cleaned = normalize_text(data['text'], options)

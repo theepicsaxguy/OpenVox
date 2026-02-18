@@ -16,6 +16,10 @@ services:
     image: pockettts-openai-server:latest
     container_name: pockettts-server
 
+    # Run as non-root user by default (can be overridden in K8s with runAsUser)
+    # Using numeric UID 1000 for broad compatibility
+    user: "1000:1000"
+
     ports:
       - '${POCKET_TTS_PORT:-49112}:49112'
 

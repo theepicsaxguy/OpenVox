@@ -523,6 +523,26 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- View: Library (full page for mobile) -->
+                <div id="view-library" class="stage-view">
+                    <div class="view-hero">
+                        <h1 class="hero-title">Library</h1>
+                        <p class="hero-subtitle">Your sources and episodes</p>
+                    </div>
+                    
+                    <div class="library-content">
+                        <div class="library-section">
+                            <h3 class="section-title">Recent Episodes</h3>
+                            <div class="library-episodes" id="library-episodes"></div>
+                        </div>
+                        
+                        <div class="library-section">
+                            <h3 class="section-title">Sources</h3>
+                            <div class="library-sources" id="library-sources"></div>
+                        </div>
+                    </div>
+                </div>
             </main>
 
             <!-- Right panel: Settings -->
@@ -628,6 +648,14 @@
                             <label>Expand Abbreviations</label>
                             <label class="toggle">
                                 <input type="checkbox" id="setting-clean-expand-abbreviations"/>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="setting-item">
+                            <label>Preserve Parentheses <span class="hint">e.g. (text)</span></label>
+                            <label class="toggle">
+                                <input type="checkbox" id="setting-clean-preserve-parentheses"/>
                                 <span class="toggle-slider"></span>
                             </label>
                         </div>

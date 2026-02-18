@@ -20,12 +20,14 @@ class CleaningOptions:
         speak_urls: bool = True,
         expand_abbreviations: bool = True,
         code_block_rule: str = 'skip',
+        preserve_parentheses: bool = True,
     ):
         self.remove_non_text = remove_non_text
         self.handle_tables = handle_tables
         self.speak_urls = speak_urls
         self.expand_abbreviations = expand_abbreviations
         self.code_block_rule = code_block_rule
+        self.preserve_parentheses = preserve_parentheses
 
 
 # Common abbreviations to expand
@@ -261,10 +263,10 @@ def _clean_text(text: str, options: CleaningOptions) -> str:
 
     # Remove non-text characters if enabled
     if options.remove_non_text:
-        text = _remove_non_text_chars(text)
+        text = _remove_non_text_chars(text, options.preserve_parentheses)
     else:
         # Even if not aggressively removing, clean up common problematic chars
-        text = _light_clean(text)
+        text = _light_clean(text, options.preserve_parentheses)
 
     return text
 
@@ -307,11 +309,16 @@ def _expand_abbreviations(text: str) -> str:
     return text
 
 
-def _remove_non_text_chars(text: str) -> str:
+def _remove_non_text_chars(text: str, preserve_parentheses: bool = True) -> str:
     """Aggressively remove non-speech characters."""
 
-    # Characters to remove completely
-    remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\(\)\<\>\^\&\%\$\@\=\+\']'
+    if preserve_parentheses:
+        # Characters to remove completely (excluding parentheses)
+        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\<\>\^\&\%\$\@\=\+\']'
+    else:
+        # Remove everything including parentheses
+        remove_chars = r'[\-\—\•\*\|\#\_\~\`\[\]\{\}\(\)\<\>\^\&\%\$\@\=\+\']'
+
     text = re.sub(remove_chars, ' ', text)
 
     # Normalize multiple spaces
@@ -320,11 +327,15 @@ def _remove_non_text_chars(text: str) -> str:
     return text.strip()
 
 
-def _light_clean(text: str) -> str:
+def _light_clean(text: str, preserve_parentheses: bool = True) -> str:
     """Light cleaning - remove problematic but keep most punctuation."""
 
-    # Remove characters that break TTS flow
-    text = re.sub(r'[\^\|]', ' ', text)
+    if not preserve_parentheses:
+        # If not preserving, remove more characters
+        text = re.sub(r'[\^\|\(\)]', ' ', text)
+    else:
+        # Remove characters that break TTS flow (except parentheses)
+        text = re.sub(r'[\^\|]', ' ', text)
 
     # Normalize dashes (but keep them)
     text = re.sub(r'[\-\—]', '-', text)
@@ -385,8 +396,8 @@ def _process_tables(text: str) -> str:
 def _clean_code_content(code: str, options: CleaningOptions) -> str:
     """Clean code content for speaking."""
     if options.remove_non_text:
-        return _remove_non_text_chars(code)
-    return _light_clean(code)
+        return _remove_non_text_chars(code, options.preserve_parentheses)
+    return _light_clean(code, options.preserve_parentheses)
 
 
 def _get_parent_type(tokens, target_token) -> str | None:

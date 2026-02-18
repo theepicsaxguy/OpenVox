@@ -700,6 +700,87 @@ function loadNowPlaying() {
     }
 }
 
+// ── Library View (Mobile Full Page) ─────────────────────────────────────
+
+async function initLibraryView() {
+    const container = document.getElementById('library-episodes');
+    const sourcesContainer = document.getElementById('library-sources');
+    
+    if (!container || !sourcesContainer) return;
+    
+    try {
+        // Load episodes
+        const episodesRes = await fetch('/api/studio/episodes');
+        const episodes = await episodesRes.json();
+        
+        if (episodes.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>No episodes yet</p></div>';
+        } else {
+            container.innerHTML = episodes.map(ep => `
+                <div class="library-card" data-episode-id="${ep.id}" data-chunk-index="0">
+                    <div class="library-card-artwork">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                    </div>
+                    <div class="library-card-info">
+                        <h4>${escapeHtml(ep.title)}</h4>
+                        <p>${ep.chunk_count || 0} chunks</p>
+                    </div>
+                    <span class="library-card-status ${ep.status}">${ep.status}</span>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            container.querySelectorAll('.library-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const epId = card.dataset.episodeId;
+                    window.location.hash = `#episode/${epId}`;
+                });
+            });
+        }
+        
+        // Load sources
+        const sourcesRes = await fetch('/api/studio/sources');
+        const sources = await sourcesRes.json();
+        
+        if (sources.length === 0) {
+            sourcesContainer.innerHTML = '<div class="empty-state"><p>No sources yet</p></div>';
+        } else {
+            sourcesContainer.innerHTML = sources.map(src => `
+                <div class="library-card" data-source-id="${src.id}">
+                    <div class="library-card-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                    </div>
+                    <div class="library-card-info">
+                        <h4>${escapeHtml(src.title)}</h4>
+                        <p>${src.source_type}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            sourcesContainer.querySelectorAll('.library-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const srcId = card.dataset.sourceId;
+                    window.location.hash = `#source/${srcId}`;
+                });
+            });
+        }
+    } catch (err) {
+        console.error('Failed to load library:', err);
+        container.innerHTML = '<div class="empty-state"><p>Failed to load library</p></div>';
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // ── Router ──────────────────────────────────────────────────────────
 
 export function route(hash) {
@@ -714,12 +795,10 @@ export function route(hash) {
     } else if (parts[0] === 'now-playing') {
         loadNowPlaying();
     } else if (parts[0] === 'library') {
-        // Show library (on mobile, open the sidebar drawer)
+        // Show library view (full page on mobile, sidebar on desktop)
         state.set('currentView', 'library');
-        showView('import');
-        refreshTree();
-        // Trigger sidebar open on mobile
-        window.dispatchEvent(new CustomEvent('open-sidebar'));
+        showView('library');
+        initLibraryView();
     } else if (parts[0] === 'settings') {
         // Show settings (open settings drawer)
         state.set('currentView', 'settings');

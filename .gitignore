@@ -185,3 +185,8 @@ cython_debug/
 .cursorindexingignore
 
 .DS_Store
+data/
+data
+*.db
+data/*
+data/podcast_studio.db
