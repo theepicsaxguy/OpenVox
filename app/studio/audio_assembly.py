@@ -4,8 +4,9 @@ Audio assembly — merge chunk audio files into a single episode file.
 
 import os
 
+import scipy.signal
+import soundfile as sf
 import torch
-import torchaudio
 
 from app.config import Config
 from app.logging_config import get_logger
@@ -13,6 +14,34 @@ from app.logging_config import get_logger
 logger = get_logger('studio.audio_assembly')
 
 SILENCE_DURATION_SECS = 0.5
+
+
+def _load_audio(full_path: str, target_sr: int):
+    """Load audio file and resample if needed."""
+    audio, sr = sf.read(full_path, dtype='float32')
+
+    # Ensure 2D
+    if audio.ndim == 1:
+        audio = audio.reshape(1, -1)
+
+    # Resample if needed
+    if sr != target_sr:
+        num_samples = int(audio.shape[1] * target_sr / sr)
+        audio = scipy.signal.resample(audio, num_samples, axis=1)
+
+    return torch.from_numpy(audio)
+
+
+def _save_audio(audio: torch.Tensor, sample_rate: int, fmt: str, output_path: str):
+    """Save audio tensor to file using scipy/soundfile."""
+    audio_np = audio.squeeze().cpu().numpy()
+
+    if fmt == 'wav':
+        import scipy.io.wavfile as wavfile
+
+        wavfile.write(output_path, sample_rate, audio_np)
+    else:
+        sf.write(output_path, audio_np, sample_rate, format=fmt.upper())
 
 
 def merge_chunks_to_episode(episode_id: str, chunk_paths: list[str], sample_rate: int) -> str:
@@ -40,12 +69,7 @@ def merge_chunks_to_episode(episode_id: str, chunk_paths: list[str], sample_rate
             logger.warning(f'Chunk audio file not found: {full_path}')
             continue
 
-        waveform, sr = torchaudio.load(full_path)
-
-        # Resample if needed
-        if sr != sample_rate:
-            resampler = torchaudio.transforms.Resample(sr, sample_rate)
-            waveform = resampler(waveform)
+        waveform = _load_audio(full_path, sample_rate)
 
         # Ensure mono
         if waveform.shape[0] > 1:
@@ -67,7 +91,7 @@ def merge_chunks_to_episode(episode_id: str, chunk_paths: list[str], sample_rate
     output_full_path = os.path.join(audio_dir, output_rel_path)
 
     fmt = ext.lstrip('.')
-    torchaudio.save(output_full_path, merged, sample_rate, format=fmt)
+    _save_audio(merged, sample_rate, fmt, output_full_path)
 
     logger.info(
         f'Merged {len(chunk_paths)} chunks into {output_rel_path} '

@@ -31,7 +31,7 @@ else
 fi
 
 # Fix ownership of mounted volumes (directories created by volume mount are owned by root)
-chown -R "${TARGET_USER}:${TARGET_GROUP}" /app/data /home/pockettts/.cache 2>/dev/null || true
+chown -R "${TARGET_USER}:${TARGET_GROUP}" /app/data /home/pockettts/.cache /tmp 2>/dev/null || true
 
 # If running as root, drop privileges; otherwise run as current user
 if [ "$(id -u)" = "0" ]; then

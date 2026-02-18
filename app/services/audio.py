@@ -6,7 +6,6 @@ import io
 import struct
 
 import torch
-import torchaudio
 
 from app.logging_config import get_logger
 
@@ -59,8 +58,18 @@ def convert_audio(
     if audio_tensor.dim() == 1:
         audio_tensor = audio_tensor.unsqueeze(0)
 
+    # Move to CPU and convert to numpy
+    audio_np = audio_tensor.squeeze().cpu().numpy()
+
     try:
-        torchaudio.save(buffer, audio_tensor, sample_rate, format=target_format)
+        if target_format == 'wav':
+            import scipy.io.wavfile as wavfile
+
+            wavfile.write(buffer, sample_rate, audio_np)
+        else:
+            import soundfile as sf
+
+            sf.write(buffer, audio_np, sample_rate, format=target_format.upper())
         buffer.seek(0)
         return buffer
     except Exception as e:

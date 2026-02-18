@@ -64,7 +64,8 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 # Create logs and data directories, ensure ownership
 RUN chown pockettts:pockettts /app && \
     mkdir -p /app/logs && chown pockettts:pockettts /app/logs && \
-    mkdir -p /app/data/sources /app/data/audio && chown -R pockettts:pockettts /app/data
+    mkdir -p /app/data/sources /app/data/audio && chown -R pockettts:pockettts /app/data && \
+    mkdir -p /tmp && chown pockettts:pockettts /tmp
 
 # Create HuggingFace cache directory (for volume mount)
 RUN mkdir -p /home/pockettts/.cache/huggingface && \
@@ -77,7 +78,8 @@ ENV POCKET_TTS_HOST=0.0.0.0 \
     POCKET_TTS_DATA_DIR=/app/data \
     POCKET_TTS_LOG_DIR=/app/logs \
     POCKET_TTS_LOG_LEVEL=INFO \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    TMPDIR=/tmp
 
 # Expose port
 EXPOSE 49112
