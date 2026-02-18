@@ -136,10 +136,17 @@ jobs:
             --network host \
             -v $(pwd):/work \
             -w /work \
+            -e CI=true \
             mcr.microsoft.com/playwright:v1.58.2-noble \
             /bin/bash -c "npm install -D @playwright/test && npx playwright test"
-        env:
-          CI: true
+
+      - name: Check for test reports
+        if: always()
+        run: |
+          echo "Checking for playwright-report directory..."
+          ls -la playwright-report/ || echo "playwright-report directory not found"
+          echo "Checking for test-results directory..."
+          ls -la test-results/ || echo "test-results directory not found"
 
       - name: Upload test results
         uses: actions/upload-artifact@v6
