@@ -1,6 +1,9 @@
 # Dockerfile for PocketTTS OpenAI-Compatible Server
 # Optimized for CPU inference (pocket-tts runs efficiently on CPU)
 # Uses CPU-only PyTorch for smaller image size (~700MB vs ~2GB)
+#
+# Version: 0.0.1
+# Image tags: 0.0.1, latest
 
 FROM python:3.14-slim AS builder
 

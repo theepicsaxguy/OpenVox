@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS sources (
     original_url TEXT,
     raw_text TEXT NOT NULL,
     cleaned_text TEXT NOT NULL,
+    cover_art TEXT,
     folder_id TEXT REFERENCES folders(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -158,6 +159,10 @@ MIGRATIONS = [
         ('clean_speak_urls', 'true'),
         ('clean_expand_abbreviations', 'true'),
         ('clean_preserve_parentheses', 'true');
+    """,
+    # Migration 4: Add cover_art to sources
+    """
+    ALTER TABLE sources ADD COLUMN cover_art TEXT;
     """,
 ]
 

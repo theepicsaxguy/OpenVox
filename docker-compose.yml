@@ -9,12 +9,12 @@
 #   Mount your own voices directory to /app/voices
 
 services:
-  pockettts:
+  openvox:
     build:
       context: .
       dockerfile: Dockerfile
-    image: pockettts-openai-server:latest
-    container_name: pockettts-server
+    image: openvox:0.0.1
+    container_name: openvox-server
 
     # Run as non-root user by default (can be overridden in K8s with runAsUser)
     # Using numeric UID 1000 for broad compatibility
@@ -41,7 +41,7 @@ services:
       # Persist studio data (library, audio, sources)
       - ./data:/app/data
       # Cache HuggingFace models to avoid re-downloading
-      - pockettts-cache:/home/pockettts/.cache/huggingface
+      - openvox-cache:/home/pockettts/.cache/huggingface
 
     restart: unless-stopped
 
@@ -67,5 +67,5 @@ services:
       start_period: 120s # Model loading takes time
 
 volumes:
-  pockettts-cache:
-    name: pockettts-huggingface-cache
+  openvox-cache:
+    name: openvox-huggingface-cache

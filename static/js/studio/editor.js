@@ -278,6 +278,54 @@ async function loadReview(sourceId) {
         // Show Edit button
         document.getElementById('btn-edit-text').style.display = 'inline-flex';
 
+        // Load cover art
+        const coverImage = document.getElementById('review-cover-image');
+        const coverPlaceholder = document.getElementById('review-cover-placeholder');
+        if (source.cover_art) {
+            coverImage.src = `/api/studio/sources/${sourceId}/cover`;
+            coverImage.onload = () => {
+                coverImage.classList.remove('hidden');
+                coverPlaceholder.classList.add('hidden');
+            };
+            coverImage.onerror = () => {
+                coverImage.classList.add('hidden');
+                coverPlaceholder.classList.remove('hidden');
+            };
+        } else {
+            coverImage.classList.add('hidden');
+            coverPlaceholder.classList.remove('hidden');
+        }
+
+        // Set up cover upload
+        const coverInput = document.getElementById('review-cover-input');
+        const uploadCoverBtn = document.getElementById('btn-upload-cover');
+        
+        uploadCoverBtn.onclick = () => coverInput.click();
+        coverInput.onchange = async () => {
+            const file = coverInput.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('cover', file);
+            
+            try {
+                const res = await fetch(`/api/studio/sources/${sourceId}/cover`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Upload failed');
+                
+                coverImage.src = `/api/studio/sources/${sourceId}/cover?t=${Date.now()}`;
+                coverImage.onload = () => {
+                    coverImage.classList.remove('hidden');
+                    coverPlaceholder.classList.add('hidden');
+                };
+                toast('Cover uploaded', 'success');
+            } catch (e) {
+                toast('Failed to upload cover', 'error');
+            }
+        };
+
         // Populate voice selector
         await populateVoiceSelect('review-voice');
 

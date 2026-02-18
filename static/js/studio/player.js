@@ -14,6 +14,8 @@ let audio = null;
 let currentEpisode = null;
 let currentChunkIndex = 0;
 let chunks = [];
+let totalEpisodeDuration = 0;
+let currentEpisodeTime = 0;
 let saveTimer = null;
 let waveformAnimationId = null;
 let isFullscreen = false;
@@ -31,6 +33,9 @@ export async function loadEpisode(episodeId, startChunk = null) {
             return;
         }
 
+        // Calculate total episode duration from all chunks
+        totalEpisodeDuration = chunks.reduce((sum, c) => sum + (c.duration_secs || 0), 0);
+
         // Restore playback position or use provided startChunk
         if (startChunk !== null) {
             currentChunkIndex = startChunk;
@@ -44,6 +49,12 @@ export async function loadEpisode(episodeId, startChunk = null) {
         const validIdx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
         if (validIdx < 0) currentChunkIndex = chunks[0].chunk_index;
 
+        // Calculate episode-level time position
+        currentEpisodeTime = calculateEpisodeTime(currentChunkIndex);
+        if (startChunk === null && episode.position_secs) {
+            currentEpisodeTime = (currentEpisodeTime - (chunks.find(c => c.chunk_index === currentChunkIndex)?.duration_secs || 0)) + episode.position_secs;
+        }
+
         showPlayer();
         $('player-title').textContent = episode.title;
         await loadChunk(currentChunkIndex);
@@ -56,14 +67,55 @@ export async function loadEpisode(episodeId, startChunk = null) {
 
         // Restore position within chunk
         if (startChunk === null && episode.position_secs) {
+            const chunkDuration = chunks.find(c => c.chunk_index === currentChunkIndex)?.duration_secs || 0;
             audio.currentTime = episode.position_secs;
         }
+
+        // Update cover art
+        updateCoverArt();
 
         // Update Now Playing view if visible
         updateNowPlayingView();
 
     } catch (e) {
         toast(`Player error: ${e.message}`, 'error');
+    }
+}
+
+function calculateEpisodeTime(chunkIndex) {
+    let time = 0;
+    for (const chunk of chunks) {
+        if (chunk.chunk_index < chunkIndex) {
+            time += chunk.duration_secs || 0;
+        }
+    }
+    return time;
+}
+
+function calculateEpisodeProgress() {
+    if (!totalEpisodeDuration || !audio) return 0;
+    return (currentEpisodeTime / totalEpisodeDuration) * 100;
+}
+
+function updateCoverArt() {
+    const coverImage = $('fs-cover-image');
+    const coverPlaceholder = $('fs-cover-placeholder');
+
+    if (!currentEpisode) return;
+
+    // Try to get cover art from source
+    const sourceId = currentEpisode.source_id;
+    if (sourceId) {
+        const coverUrl = `/api/studio/sources/${sourceId}/cover`;
+        coverImage.src = coverUrl;
+        coverImage.onload = () => {
+            coverImage.classList.remove('hidden');
+            coverPlaceholder.classList.add('hidden');
+        };
+        coverImage.onerror = () => {
+            coverImage.classList.add('hidden');
+            coverPlaceholder.classList.remove('hidden');
+        };
     }
 }
 
@@ -301,28 +353,40 @@ async function loadChunk(chunkIndex) {
 
 function onTimeUpdate() {
     if (!audio || !audio.duration) return;
-    const pct = (audio.currentTime / audio.duration) * 100;
-    $('player-scrubber').value = pct;
-    document.getElementById('scrubber-fill').style.width = `${pct}%`;
+
+    // Calculate episode-level time
+    const currentChunkDuration = chunks.find(c => c.chunk_index === currentChunkIndex)?.duration_secs || 0;
+    const chunkStartTime = calculateEpisodeTime(currentChunkIndex);
+    currentEpisodeTime = chunkStartTime + audio.currentTime;
+
+    const pct = (currentEpisodeTime / totalEpisodeDuration) * 100;
+
+    // Update mini player (chunk-level for backward compat)
+    const chunkPct = (audio.currentTime / audio.duration) * 100;
+    $('player-scrubber').value = chunkPct;
+    document.getElementById('scrubber-fill').style.width = `${chunkPct}%`;
     $('player-time-current').textContent = formatTime(audio.currentTime);
 
-    // Update Now Playing progress
+    // Update Now Playing progress (episode level)
     const nowPlayingProgress = document.getElementById('now-playing-progress');
     const nowPlayingCurrent = document.getElementById('now-playing-current');
     const nowPlayingTotal = document.getElementById('now-playing-total');
 
     if (nowPlayingProgress) nowPlayingProgress.style.width = `${pct}%`;
-    if (nowPlayingCurrent) nowPlayingCurrent.textContent = formatTime(audio.currentTime);
-    if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(audio.duration);
+    if (nowPlayingCurrent) nowPlayingCurrent.textContent = formatTime(currentEpisodeTime);
+    if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(totalEpisodeDuration);
 
-    // Update Fullscreen progress
+    // Update Fullscreen progress (episode level)
     const fsTimeCurrent = document.getElementById('fs-time-current');
-    const fsTimeTotal = document.getElementById('fs-time-total');
+    const fsTimeRemaining = document.getElementById('fs-time-remaining');
     const fsScrubber = document.getElementById('fs-scrubber');
     const fsProgressFill = document.getElementById('fs-progress-fill');
 
-    if (fsTimeCurrent) fsTimeCurrent.textContent = formatTime(audio.currentTime);
-    if (fsTimeTotal) fsTimeTotal.textContent = formatTime(audio.duration);
+    if (fsTimeCurrent) fsTimeCurrent.textContent = formatTime(currentEpisodeTime);
+    if (fsTimeRemaining) {
+        const remaining = totalEpisodeDuration - currentEpisodeTime;
+        fsTimeRemaining.textContent = `-${formatTime(remaining)}`;
+    }
     if (fsScrubber) fsScrubber.value = pct;
     if (fsProgressFill) fsProgressFill.style.width = `${pct}%`;
 
@@ -331,12 +395,23 @@ function onTimeUpdate() {
 }
 
 function onMetadataLoaded() {
+    // Update mini player (chunk level)
     $('player-time-total').textContent = formatTime(audio.duration);
     $('player-scrubber').value = 0;
     document.getElementById('scrubber-fill').style.width = '0%';
 
+    // Update Now Playing (episode level)
     const nowPlayingTotal = document.getElementById('now-playing-total');
-    if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(audio.duration);
+    if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(totalEpisodeDuration);
+
+    // Update fullscreen
+    const fsTimeTotal = document.getElementById('fs-time-total');
+    const fsTimeRemaining = document.getElementById('fs-time-remaining');
+    if (fsTimeTotal) fsTimeTotal.textContent = formatTime(totalEpisodeDuration);
+    if (fsTimeRemaining) {
+        const remaining = totalEpisodeDuration - currentEpisodeTime;
+        fsTimeRemaining.textContent = `-${formatTime(remaining)}`;
+    }
 }
 
 function onEnded() {
@@ -345,20 +420,21 @@ function onEnded() {
         addToHistory({ ...currentEpisode, percent_listened: 100 });
     }
 
-    // Auto-advance to next chunk
+    // Auto-advance to next chunk (this is the audiobook "chapter" behavior)
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx >= 0 && idx < chunks.length - 1) {
         const next = chunks[idx + 1];
         loadChunk(next.chunk_index);
         audio.play().catch(() => {});
     } else {
-        // Episode finished
+        // Episode finished - use episode-level progress
         savePosition(100);
         updatePlayPauseIcon(false);
         stopWaveformAnimation();
         drawWaveform();
         updateNowPlayingView();
         triggerHaptic('success');
+        toast('Episode complete!', 'success');
     }
 }
 
@@ -450,15 +526,39 @@ function initFullscreenPlayer() {
     // Play/pause
     $('fs-btn-play').addEventListener('click', togglePlay);
 
-    // Skip buttons
-    $('fs-btn-prev').addEventListener('click', prevChunk);
-    $('fs-btn-next').addEventListener('click', nextChunk);
-
-    // Scrubber
+    // Scrubber - episode level seeking
     $('fs-scrubber').addEventListener('input', (e) => {
-        if (!audio || !audio.duration) return;
-        audio.currentTime = (e.target.value / 100) * audio.duration;
-        $('fs-progress-fill').style.width = `${e.target.value}%`;
+        if (!totalEpisodeDuration || !chunks.length) return;
+        const pct = parseFloat(e.target.value);
+        const targetTime = (pct / 100) * totalEpisodeDuration;
+
+        // Find which chunk contains this time
+        let timeAccum = 0;
+        let targetChunk = chunks[0];
+        for (const chunk of chunks) {
+            const chunkDur = chunk.duration_secs || 0;
+            if (timeAccum + chunkDur > targetTime) {
+                targetChunk = chunk;
+                break;
+            }
+            timeAccum += chunkDur;
+        }
+
+        // If we're already on this chunk, just seek within it
+        if (targetChunk.chunk_index === currentChunkIndex && audio) {
+            const chunkStartTime = calculateEpisodeTime(currentChunkIndex);
+            audio.currentTime = targetTime - chunkStartTime;
+        } else {
+            // Load the target chunk
+            loadChunk(targetChunk.chunk_index).then(() => {
+                const chunkStartTime = calculateEpisodeTime(targetChunk.chunk_index);
+                if (audio) {
+                    audio.currentTime = targetTime - chunkStartTime;
+                }
+            });
+        }
+
+        $('fs-progress-fill').style.width = `${pct}%`;
     });
 
     // Shuffle/Repeat (placeholders for now)
@@ -526,10 +626,13 @@ function initFullscreenPlayer() {
         showSleepTimerMenu();
     });
 
-    // Queue button
-    $('fs-btn-queue').addEventListener('click', () => {
-        showQueueSheet();
-    });
+    // Playlist/Episodes button - shows episode list
+    const playlistBtn = document.getElementById('fs-btn-playlist');
+    if (playlistBtn) {
+        playlistBtn.addEventListener('click', () => {
+            showEpisodeListSheet();
+        });
+    }
 
     // Keyboard shortcuts in fullscreen
     document.addEventListener('keydown', (e) => {
@@ -574,10 +677,14 @@ function updateFullscreenUI() {
     const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
 
+    // Show episode title and total duration
     $('fs-track-title').textContent = currentEpisode.title;
-    $('fs-track-chunk').textContent = chunk
-        ? `Part ${idx + 1} of ${chunks.length}`
-        : '';
+    const episodeInfoEl = document.getElementById('fs-episode-info');
+    if (episodeInfoEl) {
+        episodeInfoEl.textContent = totalEpisodeDuration > 0
+            ? formatTime(totalEpisodeDuration)
+            : '';
+    }
 
     // Update play/pause icons
     const isPlaying = audio && !audio.paused;
@@ -599,10 +706,9 @@ function updateFullscreenUI() {
         subtitleSentences = chunk.text.split(/(?<=[.!?])\s+/);
 
         // Calculate estimated timing for each sentence based on word count
-        // Average speaking rate: ~2.5 words per second
         subtitleTimings = subtitleSentences.map(sentence => {
             const wordCount = sentence.split(/\s+/).length;
-            return wordCount / 2.5; // seconds per sentence
+            return wordCount / 2.5;
         });
     } else {
         currentSubtitleText = '';
@@ -610,11 +716,15 @@ function updateFullscreenUI() {
         subtitleTimings = [];
     }
 
-    // Update time displays
-    if (audio && audio.duration) {
-        $('fs-time-current').textContent = formatTime(audio.currentTime);
-        $('fs-time-total').textContent = formatTime(audio.duration);
-        const pct = (audio.currentTime / audio.duration) * 100;
+    // Update time displays (episode level)
+    if (totalEpisodeDuration > 0) {
+        $('fs-time-current').textContent = formatTime(currentEpisodeTime);
+        const remaining = totalEpisodeDuration - currentEpisodeTime;
+        const fsTimeRemaining = document.getElementById('fs-time-remaining');
+        if (fsTimeRemaining) {
+            fsTimeRemaining.textContent = `-${formatTime(remaining)}`;
+        }
+        const pct = (currentEpisodeTime / totalEpisodeDuration) * 100;
         $('fs-scrubber').value = pct;
         $('fs-progress-fill').style.width = `${pct}%`;
     }
@@ -1096,6 +1206,49 @@ function closeBottomSheet() {
     if (overlay) {
         overlay.classList.add('hidden');
     }
+}
+
+async function showEpisodeListSheet() {
+    const sheet = document.getElementById('bottom-sheet');
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    const title = document.getElementById('bottom-sheet-title');
+    const content = document.getElementById('bottom-sheet-content');
+
+    if (!sheet || !overlay || !title || !content) return;
+
+    title.textContent = 'Episodes';
+    content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Loading...</p>';
+    overlay.classList.remove('hidden');
+
+    try {
+        const library = await api.getLibrary();
+        const episodes = library.episodes || [];
+
+        content.innerHTML = '';
+
+        if (!episodes.length) {
+            content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No episodes yet</p>';
+        } else {
+            episodes.forEach(episode => {
+                const isCurrent = episode.id === currentEpisode?.id;
+                const item = document.createElement('button');
+                item.className = `bottom-sheet-action ${isCurrent ? 'active' : ''}`;
+                item.innerHTML = `
+                    <span class="queue-text">${episode.title}</span>
+                    <span class="queue-duration">${episode.total_duration_secs ? formatTime(episode.total_duration_secs) : ''}</span>
+                `;
+                item.addEventListener('click', () => {
+                    closeBottomSheet();
+                    loadEpisode(episode.id);
+                });
+                content.appendChild(item);
+            });
+        }
+    } catch (e) {
+        content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Failed to load episodes</p>';
+    }
+
+    sheet.scrollTop = 0;
 }
 
 // ── Init ────────────────────────────────────────────────────────────

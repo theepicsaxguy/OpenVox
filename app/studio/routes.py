@@ -154,6 +154,61 @@ def register_routes(bp):
             return jsonify({'error': 'Source not found'}), 404
         return jsonify(dict(row))
 
+    @bp.route('/sources/<source_id>/cover', methods=['GET'])
+    def get_source_cover(source_id):
+        """Get cover art for a source."""
+        import os
+        from flask import send_from_directory
+
+        db = get_db()
+        row = db.execute('SELECT cover_art FROM sources WHERE id = ?', (source_id,)).fetchone()
+        if not row:
+            return jsonify({'error': 'Source not found'}), 404
+
+        cover_art = row['cover_art']
+        if not cover_art:
+            return jsonify({'error': 'No cover art'}), 404
+
+        # If it's a file path, serve it
+        if os.path.isfile(cover_art):
+            return send_from_directory(os.path.dirname(cover_art), os.path.basename(cover_art))
+
+        # If it's a URL or base64, return as-is
+        return jsonify({'cover_art': cover_art})
+
+    @bp.route('/sources/<source_id>/cover', methods=['POST'])
+    def upload_source_cover(source_id):
+        """Upload cover art for a source."""
+        import os
+        import uuid
+        from flask import request
+
+        if 'cover' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+
+        file = request.files['cover']
+        if not file.filename:
+            return jsonify({'error': 'No file selected'}), 400
+
+        # Save to data directory
+        data_dir = os.path.join(os.path.dirname(Config.STUDIO_DB_PATH), 'covers')
+        os.makedirs(data_dir, exist_ok=True)
+
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        filename = f'{uuid.uuid4()}{ext}'
+        filepath = os.path.join(data_dir, filename)
+        file.save(filepath)
+
+        # Update database
+        db = get_db()
+        db.execute('UPDATE sources SET cover_art = ? WHERE id = ?', (filepath, source_id))
+        db.commit()
+
+        return jsonify({'ok': True, 'cover_url': f'/api/studio/sources/{source_id}/cover'})
+
     @bp.route('/sources/<source_id>', methods=['PUT'])
     def update_source(source_id):
         """Update source title or cleaned_text."""

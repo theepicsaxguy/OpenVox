@@ -167,6 +167,14 @@ export function libraryTree() {
     return request('/library/tree');
 }
 
+export function getLibrary() {
+    return request('/library/tree');
+}
+
+export function getEpisodes() {
+    return request('/episodes');
+}
+
 export function createFolder(name, parentId) {
     return request('/folders', jsonOpts('POST', { name, parent_id: parentId }));
 }
