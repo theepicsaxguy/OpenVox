@@ -24,6 +24,12 @@ on:
       - 'app/**'
       - '.github/workflows/docker.yml'
   workflow_dispatch:
+  # Allow CI workflow to call this
+  workflow_call:
+    outputs:
+      image_tag:
+        description: 'The tag of the built image'
+        value: ${{ jobs.build.outputs.image_tag }}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -39,6 +45,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
 
     steps:
       - name: Checkout code
@@ -77,3 +85,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+
+      - name: Output image tag
+        id: output
+        run: echo "image_tag=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
