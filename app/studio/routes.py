@@ -259,8 +259,8 @@ def register_routes(bp):
     @bp.route('/preview-content', methods=['POST'])
     def preview_content():
         """Preview content without importing - for URL and git repos."""
+        from app.studio.git_ingestion import preview_git_repository
         from app.studio.normalizer import CleaningOptions, normalize_text
-        from app.studio.git_ingestion import preview_git_repository, is_git_url
 
         data = request.json
         if not data:

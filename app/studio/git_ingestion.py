@@ -2,14 +2,13 @@
 Git repository ingestion using codefetch.
 """
 
-import subprocess
 import re
-from pathlib import Path
-from typing import List, Optional, Dict
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
-from app.logging_config import get_logger
 from app.config import Config
+from app.logging_config import get_logger
 
 logger = get_logger('studio.git_ingestion')
 
@@ -28,7 +27,7 @@ def is_git_url(url: str) -> bool:
     return any(host in url.lower() for host in ['github.com', 'gitlab.com', 'bitbucket.org'])
 
 
-def extract_subpath_from_url(url: str) -> Optional[str]:
+def extract_subpath_from_url(url: str) -> str | None:
     """Extract subdirectory path from URL if present."""
     # Match: github.com/user/repo/tree/branch/docs/concepts
     match = re.search(r'(?:github|gitlab|bitbucket)\.org/[^/]+/[^/]+/tree/[^/]+/(.+)', url)
@@ -37,7 +36,7 @@ def extract_subpath_from_url(url: str) -> Optional[str]:
     return None
 
 
-def run_codefetch(url: str, subpath: Optional[str] = None) -> str:
+def run_codefetch(url: str, subpath: str | None = None) -> str:
     """Execute codefetch to extract text files from git repo."""
     cmd = [
         'npx',
@@ -72,7 +71,7 @@ def run_codefetch(url: str, subpath: Optional[str] = None) -> str:
         raise RuntimeError('Node.js not found. Install Node.js to use git repository import.')
 
 
-def parse_codefetch_output(output: str) -> List[GitFile]:
+def parse_codefetch_output(output: str) -> list[GitFile]:
     """Parse codefetch output into GitFile objects."""
     files = []
 
@@ -97,7 +96,7 @@ def parse_codefetch_output(output: str) -> List[GitFile]:
     return files
 
 
-def extract_repo_title(url: str, files: List[GitFile]) -> str:
+def extract_repo_title(url: str, files: list[GitFile]) -> str:
     """Extract meaningful title from repo."""
     # Try README.md first
     for file in files:
@@ -119,7 +118,7 @@ def extract_repo_title(url: str, files: List[GitFile]) -> str:
     return 'Git Repository'
 
 
-def ingest_git_repository(url: str, subpath: Optional[str] = None) -> Dict:
+def ingest_git_repository(url: str, subpath: str | None = None) -> dict:
     """Ingest git repository and return source data."""
     if not is_git_url(url):
         raise ValueError('Invalid git repository URL. Must be GitHub, GitLab, or Bitbucket')
@@ -152,7 +151,7 @@ def ingest_git_repository(url: str, subpath: Optional[str] = None) -> Dict:
     }
 
 
-def preview_git_repository(url: str, subpath: Optional[str] = None) -> Dict:
+def preview_git_repository(url: str, subpath: str | None = None) -> dict:
     """Preview git repository without importing."""
     if not is_git_url(url):
         raise ValueError('Invalid git repository URL')

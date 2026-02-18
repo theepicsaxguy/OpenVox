@@ -192,7 +192,7 @@ function initImportView() {
     document.getElementById('btn-import').addEventListener('click', doImport);
 }
 
-function getImportText() {
+function _getImportText() {
     const activeBtn = document.querySelector('.method-btn.active');
     if (!activeBtn) return null;
     const activeTab = activeBtn.dataset.tab;

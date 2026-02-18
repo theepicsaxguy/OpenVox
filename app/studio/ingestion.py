@@ -292,7 +292,7 @@ def _extract_title_from_url(url: str, text: str, page_title: str | None = None) 
         return title
 
     # Priority 3: URL path
-    from urllib.parse import urlparse, unquote
+    from urllib.parse import unquote, urlparse
 
     parsed = urlparse(url)
     path = unquote(parsed.path).strip('/')

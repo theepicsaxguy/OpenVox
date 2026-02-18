@@ -441,7 +441,7 @@ def _final_clean(text: str, options: CleaningOptions) -> str:
     if options.preserve_structure:
         # Preserve intentional spacing - only collapse excessive newlines beyond section breaks
         max_newlines = max(options.section_spacing, options.paragraph_spacing, 4)
-        text = re.sub(r'\n{%d,}' % (max_newlines + 1), '\n' * max_newlines, text)
+        text = re.sub(r'\n{' + str(max_newlines + 1) + r',}', '\n' * max_newlines, text)
     else:
         # Legacy behavior: normalize to double newlines
         text = re.sub(r'\n{3,}', '\n\n', text)
@@ -465,7 +465,7 @@ def _basic_normalize(text: str, options: CleaningOptions) -> str:
     in_list = False
     last_was_heading = False
 
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         stripped = line.strip()
 
         # Code block fences

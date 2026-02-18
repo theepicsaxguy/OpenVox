@@ -96,10 +96,10 @@ async function saveSettings() {
         await api.updateSettings(data);
         state.set('settings', data);
         applySubtitleSettings(data);
-        
+
         // Sync mobile settings display
         applyToForm(data);
-        
+
         toast('Settings saved', 'success');
     } catch (e) {
         toast(e.message, 'error');
