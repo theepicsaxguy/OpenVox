@@ -255,7 +255,30 @@ async function loadChunk(chunkIndex) {
             if (isFullscreen) {
                 updateFullscreenUI();
             }
+            updateMediaSession();
         });
+
+        // Initialize Media Session API for lock screen controls
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', () => {
+                audio.play().catch(() => {});
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+                audio.pause();
+            });
+            navigator.mediaSession.setActionHandler('seekbackward', () => {
+                skip(-10);
+            });
+            navigator.mediaSession.setActionHandler('seekforward', () => {
+                skip(10);
+            });
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                prevChunk();
+            });
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                nextChunk();
+            });
+        }
     }
 
     audio.src = url;
@@ -352,6 +375,36 @@ function updatePlayerUI() {
     document.querySelectorAll('.chunk-card').forEach(el => el.classList.remove('playing'));
     const playingCard = document.querySelector(`.chunk-card[data-index="${currentChunkIndex}"]`);
     if (playingCard) playingCard.classList.add('playing');
+
+    updateMediaSession();
+}
+
+function updateMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+
+    const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
+    const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentEpisode?.title || 'Podcast',
+        artist: chunk ? chunk.text.substring(0, 100) : 'OpenVox',
+        album: `Part ${idx + 1} of ${chunks.length}`,
+        artwork: [
+            {
+                src: '/static/img/podcast-placeholder.svg',
+                sizes: '512x512',
+                type: 'image/svg+xml'
+            }
+        ]
+    });
+
+    if (audio && audio.duration) {
+        navigator.mediaSession.setPositionState({
+            duration: audio.duration,
+            playbackRate: audio.playbackRate,
+            position: audio.currentTime
+        });
+    }
 }
 
 function updatePlayPauseIcon(playing) {
@@ -446,6 +499,36 @@ function initFullscreenPlayer() {
     // More options button (3 dots)
     $('fs-btn-more').addEventListener('click', () => {
         showEpisodeMenu(currentEpisode?.id);
+    });
+
+    // Skip 10s buttons
+    $('fs-btn-skip-back').addEventListener('click', () => skip(-10));
+    $('fs-btn-skip-forward').addEventListener('click', () => skip(10));
+
+    // Volume control
+    const fsVolumeSlider = document.getElementById('fs-volume-slider');
+    const fsMuteBtn = document.getElementById('fs-btn-mute');
+    if (fsVolumeSlider && audio) {
+        fsVolumeSlider.value = audio.volume;
+        fsVolumeSlider.addEventListener('input', (e) => {
+            const vol = parseFloat(e.target.value);
+            if (audio) audio.volume = vol;
+            localStorage.setItem('pocket_tts_volume', vol);
+            updateMuteButton(vol > 0, fsMuteBtn);
+        });
+    }
+    if (fsMuteBtn) {
+        fsMuteBtn.addEventListener('click', () => toggleMute(fsMuteBtn));
+    }
+
+    // Sleep timer button
+    $('fs-btn-sleep').addEventListener('click', () => {
+        showSleepTimerMenu();
+    });
+
+    // Queue button
+    $('fs-btn-queue').addEventListener('click', () => {
+        showQueueSheet();
     });
 
     // Keyboard shortcuts in fullscreen
@@ -923,7 +1006,7 @@ function nextChunk() {
 let isMuted = false;
 let previousVolume = 1;
 
-function toggleMute() {
+function toggleMute(btnElement = null) {
     if (!audio) return;
 
     if (isMuted) {
@@ -936,7 +1019,22 @@ function toggleMute() {
     }
 
     updateMuteUI();
+    if (btnElement) {
+        updateMuteButton(!isMuted, btnElement);
+    }
+    const fsVolumeSlider = document.getElementById('fs-volume-slider');
+    if (fsVolumeSlider) {
+        fsVolumeSlider.value = audio.volume;
+    }
     toast(isMuted ? 'Muted' : 'Unmuted', 'info');
+}
+
+function updateMuteButton(isMuted, btn) {
+    if (!btn) return;
+    const volIcon = btn.querySelector('.volume-icon');
+    const muteIcon = btn.querySelector('.mute-icon');
+    if (volIcon) volIcon.style.display = isMuted ? 'none' : 'block';
+    if (muteIcon) muteIcon.style.display = isMuted ? 'block' : 'none';
 }
 
 function updateMuteUI() {
@@ -944,10 +1042,60 @@ function updateMuteUI() {
     if (muteBtn) {
         muteBtn.classList.toggle('muted', isMuted);
     }
+    const fsMuteBtn = document.getElementById('fs-btn-mute');
+    if (fsMuteBtn) {
+        updateMuteButton(!isMuted, fsMuteBtn);
+    }
 }
 
 function showQueue() {
     window.location.hash = '#now-playing';
+}
+
+function showQueueSheet() {
+    const sheet = document.getElementById('bottom-sheet');
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    const title = document.getElementById('bottom-sheet-title');
+    const content = document.getElementById('bottom-sheet-content');
+
+    if (!sheet || !overlay || !title || !content) return;
+
+    title.textContent = 'Queue';
+    content.innerHTML = '';
+
+    if (!chunks.length) {
+        content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No chunks available</p>';
+    } else {
+        const currentIdx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
+        chunks.forEach((chunk, idx) => {
+            const isCurrent = idx === currentIdx;
+            const isPast = idx < currentIdx;
+            const item = document.createElement('button');
+            item.className = `bottom-sheet-action ${isCurrent ? 'active' : ''} ${isPast ? 'played' : ''}`;
+            item.innerHTML = `
+                <span class="queue-num">${idx + 1}</span>
+                <span class="queue-text">${chunk.text.substring(0, 50)}${chunk.text.length > 50 ? '...' : ''}</span>
+                <span class="queue-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : ''}</span>
+            `;
+            item.addEventListener('click', () => {
+                savePosition();
+                loadChunk(chunk.chunk_index);
+                if (audio) audio.play().catch(() => {});
+                closeBottomSheet();
+            });
+            content.appendChild(item);
+        });
+    }
+
+    overlay.classList.remove('hidden');
+    sheet.scrollTop = 0;
+}
+
+function closeBottomSheet() {
+    const overlay = document.getElementById('bottom-sheet-overlay');
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
 }
 
 // ── Init ────────────────────────────────────────────────────────────

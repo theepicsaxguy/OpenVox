@@ -3441,7 +3441,229 @@ body.fullscreen-player-open .player-bar {
   transform: scale(0.98);
 }
 
-/* ── Bottom Sheet ─────────────────────────────────────────────────── */
+/* Skip buttons */
+.fs-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fs-skip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.fs-skip-btn:hover {
+  background: var(--surface-1);
+  color: var(--text-primary);
+}
+
+.fs-skip-btn .skip-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  position: absolute;
+  bottom: 2px;
+}
+
+/* Secondary controls row */
+.fs-secondary-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+}
+
+/* Volume control in fullscreen */
+.fs-volume-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fs-volume-slider {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--surface-2);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.fs-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.fs-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.fs-volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+/* Sleep timer indicator */
+.sleep-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  display: none;
+}
+
+.sleep-indicator.active {
+  display: block;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Enhanced subtitles */
+.fs-subtitles {
+  width: 100%;
+  max-width: 600px;
+  padding: var(--space-6);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --subtitle-font-size: 18px;
+}
+
+.fs-subtitle-text {
+  font-size: var(--subtitle-font-size, 1.25rem);
+  line-height: 1.8;
+  color: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.fs-subtitle-text .current-word {
+  color: var(--accent);
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.2);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.fs-subtitle-text .current-sentence {
+  color: #fff;
+}
+
+/* Mobile touch target improvements */
+@media (pointer: coarse) {
+  .fs-control-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+  }
+
+  .fs-play-btn {
+    width: 72px;
+    height: 72px;
+  }
+
+  .fs-skip-btn {
+    width: 56px;
+    height: 56px;
+  }
+
+  .fs-scrubber {
+    height: 44px;
+    margin: -20px 0;
+  }
+
+  .fs-progress-track {
+    height: 8px;
+  }
+
+  .fs-volume-slider {
+    width: 100px;
+    height: 8px;
+  }
+
+  .fs-subtitles {
+    min-height: 140px;
+    padding: var(--space-8);
+  }
+
+  .fs-subtitle-text {
+    font-size: 1.4rem;
+  }
+}
+
+/* Small mobile optimizations */
+@media (max-width: 480px) {
+  .fs-player-content {
+    padding: var(--space-4);
+    gap: var(--space-6);
+  }
+
+  .fs-artwork {
+    width: 160px;
+    height: 160px;
+  }
+
+  .fs-track-info h2 {
+    font-size: 1.25rem;
+  }
+
+  .fs-control-buttons {
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .fs-secondary-controls {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .fs-skip-btn .skip-label {
+    font-size: 0.55rem;
+  }
+
+  .fs-subtitles {
+    padding: var(--space-4);
+  }
+
+  .fs-subtitle-text {
+    font-size: 1.1rem;
+  }
+}
+
+/* Bottom Sheet */
 .bottom-sheet-overlay {
   position: fixed;
   inset: 0;

@@ -1182,15 +1182,40 @@
 
             <div class="fs-controls">
                 <div class="fs-progress">
+                    <button class="fs-skip-btn" id="fs-btn-skip-back" title="Skip back 10s">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 4v6h6"/>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                        </svg>
+                        <span class="skip-label">10</span>
+                    </button>
                     <span id="fs-time-current">0:00</span>
                     <div class="fs-progress-track">
                         <div class="fs-progress-fill" id="fs-progress-fill"></div>
                         <input type="range" class="fs-scrubber" id="fs-scrubber" min="0" max="100" value="0" step="0.1"/>
                     </div>
                     <span id="fs-time-total">0:00</span>
+                    <button class="fs-skip-btn" id="fs-btn-skip-forward" title="Skip forward 10s">
+                        <span class="skip-label">10</span>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                    </button>
                 </div>
 
                 <div class="fs-control-buttons">
+                    <button class="fs-control-btn" id="fs-btn-queue" title="Queue (Q)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"/>
+                            <line x1="8" y1="12" x2="21" y2="12"/>
+                            <line x1="8" y1="18" x2="21" y2="18"/>
+                            <line x1="3" y1="6" x2="3.01" y2="6"/>
+                            <line x1="3" y1="12" x2="3.01" y2="12"/>
+                            <line x1="3" y1="18" x2="3.01" y2="18"/>
+                        </svg>
+                    </button>
+
                     <button class="fs-control-btn" id="fs-btn-shuffle">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="16 3 21 3 21 8"/>
@@ -1234,6 +1259,30 @@
                         </svg>
                     </button>
 
+                    <button class="fs-control-btn" id="fs-btn-sleep" title="Sleep timer">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span class="sleep-indicator" id="fs-sleep-indicator"></span>
+                    </button>
+                </div>
+
+                <div class="fs-secondary-controls">
+                    <div class="fs-volume-control">
+                        <button class="fs-control-btn" id="fs-btn-mute" title="Mute">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="volume-icon">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mute-icon" style="display:none">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                <line x1="23" y1="9" x2="17" y2="15"/>
+                                <line x1="17" y1="9" x2="23" y2="15"/>
+                            </svg>
+                        </button>
+                        <input type="range" class="fs-volume-slider" id="fs-volume-slider" min="0" max="1" step="0.05" value="1"/>
+                    </div>
                     <div class="playback-speed-wrapper">
                         <select id="fs-playback-speed" class="speed-select" title="Playback speed">
                             <option value="0.5">0.5x</option>
