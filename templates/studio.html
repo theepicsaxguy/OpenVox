@@ -179,7 +179,7 @@
 
                                 <div class="tab-content" id="tab-file">
                                     <div class="file-dropzone" id="file-dropzone">
-                                        <div class="dropzone-content">
+                                        <div class="dropzone-content" id="dropzone-content-default">
                                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
                                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                                 <polyline points="17 8 12 3 7 8"/>
@@ -188,6 +188,17 @@
                                             <p class="dropzone-text">Drop files here or click to browse</p>
                                             <p class="dropzone-hint">Supports .md, .txt files</p>
                                             <input type="file" id="import-file" accept=".md,.txt" hidden/>
+                                        </div>
+                                        <div class="dropzone-content dropzone-content-selected hidden" id="dropzone-content-selected">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                <polyline points="14 2 14 8 20 8"/>
+                                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                                <polyline points="10 9 9 9 8 9"/>
+                                            </svg>
+                                            <p class="dropzone-filename" id="selected-filename">document.md</p>
+                                            <p class="dropzone-hint">File selected - click to change</p>
                                         </div>
                                     </div>
                                 </div>
@@ -263,6 +274,14 @@
                                 <polyline points="9 18 15 12 9 6"/>
                             </svg>
                             <span class="crumb active" id="review-breadcrumb">Review</span>
+                        </div>
+                        <div class="header-actions-mobile">
+                            <button class="btn btn-primary btn-generate-mobile" id="btn-review-generate-header">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
+                                Generate
+                            </button>
                         </div>
                     </div>
 
@@ -540,6 +559,163 @@
                         <div class="library-section">
                             <h3 class="section-title">Sources</h3>
                             <div class="library-sources" id="library-sources"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- View: Settings (full page for mobile) -->
+                <div id="view-settings" class="stage-view">
+                    <div class="view-hero">
+                        <h1 class="hero-title">Settings</h1>
+                        <p class="hero-subtitle">Configure your podcast studio</p>
+                    </div>
+                    
+                    <div class="settings-fullpage">
+                        <div class="settings-group">
+                            <h4>Defaults</h4>
+                            
+                            <div class="setting-item">
+                                <label>Voice</label>
+                                <div class="select-wrapper">
+                                    <select id="setting-voice-mobile" class="styled-select"></select>
+                                </div>
+                            </div>
+
+                            <div class="setting-row">
+                                <div class="setting-item half">
+                                    <label>Format</label>
+                                    <div class="select-wrapper">
+                                        <select id="setting-format-mobile" class="styled-select">
+                                            <option value="wav">WAV</option>
+                                            <option value="mp3">MP3</option>
+                                            <option value="flac">FLAC</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="setting-item half">
+                                    <label>Strategy</label>
+                                    <div class="select-wrapper">
+                                        <select id="setting-strategy-mobile" class="styled-select">
+                                            <option value="paragraph">Paragraph</option>
+                                            <option value="sentence">Sentence</option>
+                                            <option value="heading">Section</option>
+                                            <option value="max_chars">Characters</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <label>Max Characters</label>
+                                <input type="number" id="setting-max-chars-mobile" value="2000" min="200" max="10000" step="100" class="text-input"/>
+                            </div>
+
+                            <div class="setting-item">
+                                <label>Code Blocks</label>
+                                <div class="select-wrapper">
+                                    <select id="setting-code-rule-mobile" class="styled-select">
+                                        <option value="skip">Skip</option>
+                                        <option value="placeholder">Placeholder</option>
+                                        <option value="read">Read aloud</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="setting-item">
+                                <label>Breathing <span class="hint">natural pauses</span></label>
+                                <div class="select-wrapper">
+                                    <select id="setting-breathing-mobile" class="styled-select">
+                                        <option value="none">None</option>
+                                        <option value="light">Light</option>
+                                        <option value="normal" selected>Normal</option>
+                                        <option value="heavy">Heavy</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary btn-full" id="btn-save-settings-mobile">Save Settings</button>
+
+                        <div class="settings-group">
+                            <h4>Text Cleaning</h4>
+                            
+                            <div class="setting-item">
+                                <label>Remove Non-Text</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-clean-remove-non-text-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Speak URLs</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-clean-speak-urls-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Handle Tables</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-clean-handle-tables-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Expand Abbreviations</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-clean-expand-abbreviations-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Preserve Parentheses <span class="hint">e.g. (text)</span></label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-clean-preserve-parentheses-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <h4>Subtitles</h4>
+                            
+                            <div class="setting-item">
+                                <label>Show Subtitles</label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="setting-show-subtitles-mobile"/>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Subtitle Mode</label>
+                                <div class="select-wrapper">
+                                    <select id="setting-subtitle-mode-mobile" class="styled-select">
+                                        <option value="full">Full Text</option>
+                                        <option value="highlight">Word Highlight</option>
+                                        <option value="minimal">Minimal</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Font Size</label>
+                                <input type="range" id="setting-subtitle-font-size-mobile" min="12" max="32" step="2" value="16"/>
+                                <span class="range-value" id="subtitle-font-value-mobile">16px</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-group">
+                            <h4>Tags</h4>
+                            <div class="tag-creator">
+                                <input type="text" id="new-tag-name-mobile" placeholder="New tag..." class="text-input"/>
+                                <button class="btn btn-secondary" id="btn-create-tag-mobile">Add</button>
+                            </div>
+                            <div class="tags-cloud" id="tags-list-mobile"></div>
                         </div>
                     </div>
                 </div>

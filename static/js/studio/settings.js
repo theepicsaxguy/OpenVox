@@ -21,6 +21,7 @@ async function loadSettings() {
 }
 
 function applyToForm(settings) {
+    // Desktop drawer settings
     if (settings.default_voice) $('setting-voice').value = settings.default_voice;
     if (settings.default_strategy) $('setting-strategy').value = settings.default_strategy;
     if (settings.default_max_chars) $('setting-max-chars').value = settings.default_max_chars;
@@ -46,27 +47,46 @@ function applyToForm(settings) {
         $('setting-subtitle-font-size').value = settings.subtitle_font_size;
         $('subtitle-font-value').textContent = settings.subtitle_font_size + 'px';
     }
+
+    // Mobile full-page settings
+    if (settings.default_voice) $('setting-voice-mobile').value = settings.default_voice;
+    if (settings.default_strategy) $('setting-strategy-mobile').value = settings.default_strategy;
+    if (settings.default_max_chars) $('setting-max-chars-mobile').value = settings.default_max_chars;
+    if (settings.default_format) $('setting-format-mobile').value = settings.default_format;
+    if (settings.default_code_rule) $('setting-code-rule-mobile').value = settings.default_code_rule;
+    if (settings.default_breathing) $('setting-breathing-mobile').value = settings.default_breathing;
+
+    $('setting-clean-remove-non-text-mobile').checked = bool('clean_remove_non_text', false);
+    $('setting-clean-speak-urls-mobile').checked = bool('clean_speak_urls', true);
+    $('setting-clean-handle-tables-mobile').checked = bool('clean_handle_tables', true);
+    $('setting-clean-expand-abbreviations-mobile').checked = bool('clean_expand_abbreviations', true);
+    $('setting-clean-preserve-parentheses-mobile').checked = bool('clean_preserve_parentheses', true);
+
+    $('setting-show-subtitles-mobile').checked = bool('show_subtitles', true);
+    if (settings.subtitle_mode) $('setting-subtitle-mode-mobile').value = settings.subtitle_mode;
+    if (settings.subtitle_font_size) {
+        $('setting-subtitle-font-size-mobile').value = settings.subtitle_font_size;
+        $('subtitle-font-value-mobile').textContent = settings.subtitle_font_size + 'px';
+    }
 }
 
 // ── Save settings ───────────────────────────────────────────────────
 
 async function saveSettings() {
     const data = {
-        default_voice: $('setting-voice').value,
-        default_strategy: $('setting-strategy').value,
-        default_max_chars: parseInt($('setting-max-chars').value),
-        default_format: $('setting-format').value,
-        default_code_rule: $('setting-code-rule').value,
-        default_breathing: $('setting-breathing').value,
+        default_voice: $('setting-voice').value || $('setting-voice-mobile').value,
+        default_strategy: $('setting-strategy').value || $('setting-strategy-mobile').value,
+        default_max_chars: parseInt($('setting-max-chars').value || $('setting-max-chars-mobile').value),
+        default_format: $('setting-format').value || $('setting-format-mobile').value,
+        default_code_rule: $('setting-code-rule').value || $('setting-code-rule-mobile').value,
+        default_breathing: $('setting-breathing').value || $('setting-breathing-mobile').value,
 
-        // Cleaning settings
         clean_remove_non_text: $('setting-clean-remove-non-text').checked ? 'true' : 'false',
         clean_speak_urls: $('setting-clean-speak-urls').checked ? 'true' : 'false',
         clean_handle_tables: $('setting-clean-handle-tables').checked ? 'true' : 'false',
         clean_expand_abbreviations: $('setting-clean-expand-abbreviations').checked ? 'true' : 'false',
         clean_preserve_parentheses: $('setting-clean-preserve-parentheses').checked ? 'true' : 'false',
 
-        // Subtitle settings
         show_subtitles: $('setting-show-subtitles').checked ? 'true' : 'false',
         subtitle_mode: $('setting-subtitle-mode').value,
         subtitle_font_size: $('setting-subtitle-font-size').value,
@@ -76,6 +96,10 @@ async function saveSettings() {
         await api.updateSettings(data);
         state.set('settings', data);
         applySubtitleSettings(data);
+        
+        // Sync mobile settings display
+        applyToForm(data);
+        
         toast('Settings saved', 'success');
     } catch (e) {
         toast(e.message, 'error');
@@ -186,6 +210,7 @@ export async function init() {
     }
 
     $('btn-save-settings').addEventListener('click', saveSettings);
+    $('btn-save-settings-mobile')?.addEventListener('click', saveSettings);
 
     $('btn-create-tag').addEventListener('click', async () => {
         const name = $('new-tag-name').value.trim();
@@ -193,6 +218,19 @@ export async function init() {
         try {
             await api.createTag(name);
             $('new-tag-name').value = '';
+            await loadTags();
+            toast('Tag created', 'success');
+        } catch (e) {
+            toast(e.message, 'error');
+        }
+    });
+
+    $('btn-create-tag-mobile')?.addEventListener('click', async () => {
+        const name = $('new-tag-name-mobile').value.trim();
+        if (!name) return;
+        try {
+            await api.createTag(name);
+            $('new-tag-name-mobile').value = '';
             await loadTags();
             toast('Tag created', 'success');
         } catch (e) {
@@ -210,6 +248,10 @@ export async function init() {
     // Subtitle font size slider live preview
     $('setting-subtitle-font-size').addEventListener('input', (e) => {
         $('subtitle-font-value').textContent = e.target.value + 'px';
+    });
+
+    $('setting-subtitle-font-size-mobile')?.addEventListener('input', (e) => {
+        $('subtitle-font-value-mobile').textContent = e.target.value + 'px';
     });
 
     await loadSettings();

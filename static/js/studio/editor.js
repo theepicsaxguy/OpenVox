@@ -48,6 +48,25 @@ function initImportView() {
     // File dropzone
     const dropzone = document.getElementById('file-dropzone');
     const fileInput = document.getElementById('import-file');
+    const dropzoneDefault = document.getElementById('dropzone-content-default');
+    const dropzoneSelected = document.getElementById('dropzone-content-selected');
+    const selectedFilename = document.getElementById('selected-filename');
+
+    function updateFileDisplay() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            if (selectedFilename) {
+                selectedFilename.textContent = file.name;
+            }
+            dropzoneDefault?.classList.add('hidden');
+            dropzoneSelected?.classList.remove('hidden');
+            dropzoneSelected?.classList.add('dropzone-content-selected');
+        } else {
+            dropzoneDefault?.classList.remove('hidden');
+            dropzoneSelected?.classList.add('hidden');
+            dropzoneSelected?.classList.remove('dropzone-content-selected');
+        }
+    }
 
     if (dropzone && fileInput) {
         dropzone.addEventListener('click', () => fileInput.click());
@@ -67,7 +86,15 @@ function initImportView() {
             const files = e.dataTransfer.files;
             if (files.length) {
                 fileInput.files = files;
+                updateFileDisplay();
                 toast(`File selected: ${files[0].name}`, 'info');
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            updateFileDisplay();
+            if (fileInput.files.length > 0) {
+                toast(`File selected: ${fileInput.files[0].name}`, 'info');
             }
         });
     }
@@ -284,6 +311,45 @@ function initReviewView() {
             btn.innerHTML = originalContent;
         }
     });
+
+    // Mobile generate button (header)
+    const mobileGenerateBtn = document.getElementById('btn-review-generate-header');
+    if (mobileGenerateBtn) {
+        mobileGenerateBtn.addEventListener('click', async () => {
+            const sourceId = state.get('currentSourceId');
+            const btn = mobileGenerateBtn;
+            const originalContent = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="60" stroke-dashoffset="20"/>
+                </svg>
+                Generating...
+            `;
+
+            const data = {
+                source_id: sourceId,
+                voice_id: document.getElementById('review-voice').value,
+                output_format: document.getElementById('review-format').value,
+                chunk_strategy: document.getElementById('review-strategy').value,
+                chunk_max_length: parseInt(document.getElementById('review-max-chars').value),
+                breathing_intensity: document.getElementById('review-breathing').value,
+            };
+
+            try {
+                const result = await api.createEpisode(data);
+                toast(`Episode created (${result.chunk_count} chunks). Generating...`, 'success');
+                refreshTree();
+                window.location.hash = `#episode/${result.id}`;
+            } catch (e) {
+                toast(e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        });
+    }
 }
 
 function renderChunkPreview(chunks, prefix = '') {
@@ -801,10 +867,14 @@ export function route(hash) {
         showView('library');
         initLibraryView();
     } else if (parts[0] === 'settings') {
-        // Show settings (open settings drawer)
+        // Show settings (full page on mobile, drawer on desktop)
         state.set('currentView', 'settings');
-        showView('import');
-        window.dispatchEvent(new CustomEvent('open-settings'));
+        if (window.innerWidth <= 1024) {
+            showView('settings');
+        } else {
+            showView('import');
+            window.dispatchEvent(new CustomEvent('open-settings'));
+        }
     } else {
         state.set('currentView', 'import');
         showView('import');
