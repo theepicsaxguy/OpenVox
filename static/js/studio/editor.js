@@ -8,6 +8,7 @@ import * as state from './state.js';
 import { toast, confirm as confirmDialog, showUndoToast } from './main.js';
 import { refreshTree } from './library.js';
 import { loadEpisode as playerLoadEpisode } from './player.js';
+import { escapeHtml, formatTime } from './utils.js';
 
 // ── View switching ──────────────────────────────────────────────────
 
@@ -687,19 +688,6 @@ async function populateVoiceSelect(selectId) {
         sel.appendChild(opt);
     }
     if (currentVal) sel.value = currentVal;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatTime(secs) {
-    if (!secs || !isFinite(secs)) return '0:00';
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 // ── Now Playing View ────────────────────────────────────────────────

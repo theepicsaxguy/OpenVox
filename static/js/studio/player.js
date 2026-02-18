@@ -8,6 +8,7 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import { toast } from './main.js';
+import { $, formatTime } from './utils.js';
 
 let audio = null;
 let currentEpisode = null;
@@ -16,8 +17,6 @@ let chunks = [];
 let saveTimer = null;
 let waveformAnimationId = null;
 let isFullscreen = false;
-
-const $ = (id) => document.getElementById(id);
 
 // ── Public API ──────────────────────────────────────────────────────
 
@@ -619,13 +618,6 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-function formatTime(secs) {
-    if (!secs || !isFinite(secs)) return '0:00';
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-}
 
 // ── Haptic Feedback (Mobile) ───────────────────────────────────────────
 

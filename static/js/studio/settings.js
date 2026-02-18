@@ -6,8 +6,7 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import { toast } from './main.js';
-
-const $ = (id) => document.getElementById(id);
+import { $, escapeHtml } from './utils.js';
 
 // ── Load settings ───────────────────────────────────────────────────
 
@@ -121,13 +120,6 @@ function renderTags(tags) {
         list.appendChild(chip);
     }
 }
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 // ── Generation status polling ───────────────────────────────────────
 
 let _statusInterval = null;

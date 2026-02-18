@@ -53,3 +53,80 @@ jobs:
 
       - name: Run ESLint
         run: npx eslint . --ignore-pattern static/js/app.js
+
+  test-e2e:
+    runs-on: ubuntu-latest
+    needs: [lint, lint-js]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Install Playwright
+        run: npm install -D @playwright/test
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Python dependencies
+        run: pip install -e .
+
+      - name: Download model files
+        run: python -c "from app.services.tts import get_tts_service; get_tts_service().load_model()"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        continue-on-error: true
+
+      - name: Start server in background
+        run: |
+          python server.py --host 0.0.0.0 --port 49112 &
+          echo $! > server.pid
+          sleep 30
+        env:
+          POCKET_TTS_LOG_LEVEL: DEBUG
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..30}; do
+            if curl -s http://localhost:49112/health > /dev/null; then
+              echo "Server is ready!"
+              exit 0
+            fi
+            echo "Waiting for server... ($i/30)"
+            sleep 2
+          done
+          echo "Server failed to start"
+          exit 1
+
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Stop server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) || true
+            rm server.pid
+          fi
