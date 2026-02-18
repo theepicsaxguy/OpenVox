@@ -66,6 +66,6 @@ export default [
         },
     },
     {
-        ignores: ['static/js/app.js'],
+        ignores: ['static/js/app.js', 'e2e/**/*.js'],
     },
 ];
