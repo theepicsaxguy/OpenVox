@@ -724,14 +724,14 @@ function loadNowPlaying() {
 async function initLibraryView() {
     const container = document.getElementById('library-episodes');
     const sourcesContainer = document.getElementById('library-sources');
-    
+
     if (!container || !sourcesContainer) return;
-    
+
     try {
         // Load episodes
         const episodesRes = await fetch('/api/studio/episodes');
         const episodes = await episodesRes.json();
-        
+
         if (episodes.length === 0) {
             container.innerHTML = '<div class="empty-state"><p>No episodes yet</p></div>';
         } else {
@@ -749,7 +749,7 @@ async function initLibraryView() {
                     <span class="library-card-status ${ep.status}">${ep.status}</span>
                 </div>
             `).join('');
-            
+
             // Add click handlers
             container.querySelectorAll('.library-card').forEach(card => {
                 card.addEventListener('click', () => {
@@ -758,11 +758,11 @@ async function initLibraryView() {
                 });
             });
         }
-        
+
         // Load sources
         const sourcesRes = await fetch('/api/studio/sources');
         const sources = await sourcesRes.json();
-        
+
         if (sources.length === 0) {
             sourcesContainer.innerHTML = '<div class="empty-state"><p>No sources yet</p></div>';
         } else {
@@ -780,7 +780,7 @@ async function initLibraryView() {
                     </div>
                 </div>
             `).join('');
-            
+
             sourcesContainer.querySelectorAll('.library-card').forEach(card => {
                 card.addEventListener('click', () => {
                     const srcId = card.dataset.sourceId;
@@ -792,12 +792,6 @@ async function initLibraryView() {
         console.error('Failed to load library:', err);
         container.innerHTML = '<div class="empty-state"><p>Failed to load library</p></div>';
     }
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
 }
 
 // ── Router ──────────────────────────────────────────────────────────

@@ -3,6 +3,8 @@
  * Premium Edition
  */
 
+/* global navigator */
+
 import * as api from './api.js';
 import * as state from './state.js';
 import { toast } from './main.js';
@@ -651,7 +653,7 @@ function initSwipeGestures() {
     const playerContainer = document.getElementById('player-bar');
     const fullscreenPlayer = document.getElementById('fullscreen-player');
 
-    function handleSwipe(startX, endX, startY, endY, element) {
+    function handleSwipe(startX, endX, startY, endY, _element) {
         const diffX = endX - startX;
         const diffY = endY - startY;
         const absX = Math.abs(diffX);
@@ -855,7 +857,7 @@ export function getPlaybackHistory() {
     return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
 }
 
-function clearHistory() {
+function _clearHistory() {
     localStorage.removeItem(HISTORY_KEY);
     state.emit('history-updated', []);
     toast('Playback history cleared', 'info');

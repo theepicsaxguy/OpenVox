@@ -6,7 +6,6 @@
 import * as api from './api.js';
 import * as state from './state.js';
 import { toast } from './main.js';
-import { populateVoiceSelect } from './editor.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -181,7 +180,7 @@ export async function init() {
     // Load voices first and store in state
     const voices = await api.listVoices();
     state.set('voices', voices);
-    
+
     // Populate voice select
     const voiceSelect = $('setting-voice');
     if (voiceSelect) {
