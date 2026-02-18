@@ -30,15 +30,19 @@ function applyToForm(settings) {
     if (settings.default_code_rule) $('setting-code-rule').value = settings.default_code_rule;
     if (settings.default_breathing) $('setting-breathing').value = settings.default_breathing;
 
-    // Cleaning settings
-    $('setting-clean-remove-non-text').checked = settings.clean_remove_non_text === 'true';
-    $('setting-clean-speak-urls').checked = settings.clean_speak_urls === 'true';
-    $('setting-clean-handle-tables').checked = settings.clean_handle_tables === 'true';
-    $('setting-clean-expand-abbreviations').checked = settings.clean_expand_abbreviations === 'true';
-    $('setting-clean-preserve-parentheses').checked = settings.clean_preserve_parentheses !== 'false';
+    const bool = (key, def = false) => {
+        const val = settings[key];
+        if (val === undefined) return def;
+        return val === 'true' || val === true;
+    };
 
-    // Subtitle settings
-    $('setting-show-subtitles').checked = settings.show_subtitles !== 'false';
+    $('setting-clean-remove-non-text').checked = bool('clean_remove_non_text', false);
+    $('setting-clean-speak-urls').checked = bool('clean_speak_urls', true);
+    $('setting-clean-handle-tables').checked = bool('clean_handle_tables', true);
+    $('setting-clean-expand-abbreviations').checked = bool('clean_expand_abbreviations', true);
+    $('setting-clean-preserve-parentheses').checked = bool('clean_preserve_parentheses', true);
+
+    $('setting-show-subtitles').checked = bool('show_subtitles', true);
     if (settings.subtitle_mode) $('setting-subtitle-mode').value = settings.subtitle_mode;
     if (settings.subtitle_font_size) {
         $('setting-subtitle-font-size').value = settings.subtitle_font_size;
@@ -164,7 +168,7 @@ function applySubtitleSettings(settings) {
     const container = document.getElementById('fs-subtitles-container');
     if (!container) return;
 
-    const show = settings.show_subtitles !== 'false';
+    const show = settings.show_subtitles !== 'false' && settings.show_subtitles !== false;
     container.style.display = show ? 'flex' : 'none';
 
     const fontSize = settings.subtitle_font_size || '16';
@@ -174,7 +178,21 @@ function applySubtitleSettings(settings) {
 // ── Init ────────────────────────────────────────────────────────────
 
 export async function init() {
-    await populateVoiceSelect('setting-voice');
+    // Load voices first and store in state
+    const voices = await api.listVoices();
+    state.set('voices', voices);
+    
+    // Populate voice select
+    const voiceSelect = $('setting-voice');
+    if (voiceSelect) {
+        voiceSelect.innerHTML = '';
+        for (const v of voices) {
+            const opt = document.createElement('option');
+            opt.value = v.id || v.voice_id;
+            opt.textContent = `${v.name} (${v.type || 'builtin'})`;
+            voiceSelect.appendChild(opt);
+        }
+    }
 
     $('btn-save-settings').addEventListener('click', saveSettings);
 

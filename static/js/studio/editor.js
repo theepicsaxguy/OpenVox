@@ -133,6 +133,13 @@ function getImportText() {
     const activeTab = activeBtn.dataset.tab;
     if (activeTab === 'paste') return document.getElementById('import-text').value;
     if (activeTab === 'url') return null;
+    if (activeTab === 'file') {
+        const fileInput = document.getElementById('import-file');
+        if (fileInput && fileInput.files.length > 0) {
+            return fileInput.files[0].name;
+        }
+        return null;
+    }
     return null;
 }
 
@@ -177,6 +184,7 @@ async function doImport() {
 // ── Review & Generate view ──────────────────────────────────────────
 
 async function loadReview(sourceId) {
+    clearEpisodeRefresh();
     state.set('currentSourceId', sourceId);
     state.set('currentView', 'review');
     showView('review');
@@ -303,6 +311,7 @@ function renderChunkPreview(chunks, prefix = '') {
 // ── Source view ──────────────────────────────────────────────────────
 
 async function loadSource(sourceId) {
+    clearEpisodeRefresh();
     state.set('currentSourceId', sourceId);
     state.set('currentView', 'source');
     showView('source');
@@ -365,7 +374,15 @@ function initSourceView() {
 
 let episodeRefreshInterval = null;
 
+function clearEpisodeRefresh() {
+    if (episodeRefreshInterval) {
+        clearInterval(episodeRefreshInterval);
+        episodeRefreshInterval = null;
+    }
+}
+
 async function loadEpisode(episodeId) {
+    clearEpisodeRefresh();
     state.set('currentEpisodeId', episodeId);
     state.set('currentView', 'episode');
     showView('episode');
@@ -455,6 +472,7 @@ function renderEpisode(episode) {
     for (const chunk of (episode.chunks || [])) {
         const card = document.createElement('div');
         card.className = 'chunk-card';
+        card.dataset.index = chunk.chunk_index;
         if (state.get('playingEpisodeId') === episode.id &&
             state.get('playingChunkIndex') === chunk.chunk_index) {
             card.classList.add('playing');
@@ -664,7 +682,7 @@ async function populateVoiceSelect(selectId) {
     sel.innerHTML = '';
     for (const v of voices) {
         const opt = document.createElement('option');
-        opt.value = v.id;
+        opt.value = v.id || v.voice_id;
         opt.textContent = `${v.name} (${v.type || 'builtin'})`;
         sel.appendChild(opt);
     }
@@ -687,6 +705,7 @@ function formatTime(secs) {
 // ── Now Playing View ────────────────────────────────────────────────
 
 function loadNowPlaying() {
+    clearEpisodeRefresh();
     state.set('currentView', 'now-playing');
     showView('now-playing');
     refreshTree();
