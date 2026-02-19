@@ -49,7 +49,7 @@ server.py                    # Entry point, CLI, starts Waitress
 | File | Purpose |
 |------|---------|
 | `server.py` | Entry point, CLI args, Waitress server |
-| `app/routes.py` | HTTP endpoints: `/`, `/health`, `/v1/voices`, `/v1/audio/speech` |
+| `app/routes.py` | HTTP endpoints: `/`, `/health`, `/v1/voices`, `/v1/audio/speech`, `/openapi.json` |
 | `app/services/tts.py` | Model loading, voice caching, generation |
 | `app/services/audio.py` | Audio format conversion, streaming |
 | `app/studio/repositories.py` | DB query abstraction (Source, Episode, Chunk, Folder, Tag, Playback, Settings) |
@@ -65,6 +65,10 @@ server.py                    # Entry point, CLI, starts Waitress
 | `templates/studio.html` | Mobile-first Studio UI shell |
 | `static/js/studio/` | Frontend JavaScript modules |
 | `static/css/studio.css` | Dark mode UI styles |
+| `scripts/generate_openapi.py` | Generates OpenAPI spec from live Flask routes |
+| `orval.config.mjs` | Orval configuration for TypeScript client generation |
+| `static/js/studio/client.ts` | **Generated** TypeScript API client (DO NOT EDIT) |
+| `static/js/studio/api.ts` | Wrapper that extracts `.data` from AxiosResponse |
 
 ## API Endpoints
 
@@ -74,31 +78,13 @@ server.py                    # Entry point, CLI, starts Waitress
 |----------|--------|---------|
 | `/` | GET | Web UI (Studio) |
 | `/health` | GET | Health check |
+| `/openapi.json` | GET | OpenAPI spec (for Orval client generation) |
 | `/v1/voices` | GET | List voices |
 | `/v1/audio/speech` | POST | Generate speech |
 
 ### Studio API (`/api/studio`)
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/sources` | GET/POST | List/create sources |
-| `/sources/{id}` | GET/PUT/DELETE | Source operations |
-| `/sources/{id}/re-clean` | POST | Re-normalize text |
-| `/preview-clean` | POST | Preview text normalization |
-| `/preview-chunks` | POST | Preview chunking |
-| `/episodes` | GET/POST | List/create episodes |
-| `/episodes/{id}` | GET/DELETE | Episode operations |
-| `/episodes/{id}/regenerate` | POST | Regenerate all chunks |
-| `/episodes/{id}/chunks/{idx}/regenerate` | POST | Regenerate single chunk |
-| `/episodes/{id}/audio/{idx}` | GET | Serve chunk audio |
-| `/episodes/{id}/audio/full` | GET | Download full episode |
-| `/generation/status` | GET | Queue status |
-| `/library/tree` | GET | Full library structure |
-| `/folders` | POST | Create folder |
-| `/folders/{id}` | PUT/DELETE | Folder operations |
-| `/playback/{id}` | GET/POST | Playback state |
-| `/settings` | GET/PUT | User settings |
-| `/tags` | GET/POST | Tag management |
+All endpoints are auto-generated from Flask routes. Run `pnpm run client:generate` to update the TypeScript client after modifying any route.
 
 ## Configuration (Environment Variables)
 
@@ -215,7 +201,8 @@ JavaScript modules:
 - `player-chunk.js` - Chunk loading and playback
 - `editor.js` - Import, source, episode views
 - `settings.js` - Settings panel
-- `api.js` - API client
+- `api.ts` - Wrapper with auto .data extraction and URL helpers (import from here)
+- `client.ts` - **Generated** TypeScript API client (DO NOT EDIT)
 - `state.js` - Pub/sub state management
 - `dom.js` - Safe DOM manipulation helpers
 
@@ -257,7 +244,7 @@ Before writing new code, check if existing solutions exist:
 1. **Frontend utilities**: Check `main.js` for `escapeHtml`, `formatTime`, `toast`, `confirm`, etc.
 2. **DOM helpers**: Use `dom.js` for safe DOM manipulation (`setText`, `fromHTML`, `createElement`)
 3. **State management**: Use `state.js` pub/sub - don't create new event systems
-4. **API calls**: Use `api.js` functions, add new endpoints there
+4. **API calls**: Use `api.ts` functions (imports from generated `client.ts`)
 5. **CSS utilities**: Check existing classes in `studio.css` before adding new styles
 6. **Python utilities**: Check `app/studio/` for existing helpers before adding new modules
 7. **Database queries**: Use repository classes in `repositories.py` instead of raw SQL
@@ -332,3 +319,87 @@ Avoid:
 2. **Database Foreign Key Validation**: Always validate that referenced entities exist before performing operations. Don't rely solely on FK constraints - check existence and return proper error messages.
 
 3. **Recovery from Server Crashes**: For long-running background operations (like audio generation), implement startup recovery that resets stuck/inconsistent states to known good values.
+
+## Auto-Generated API Client (OpenAPI + Orval)
+
+This project uses a **fully auto-generated API client** - NO manual API calls allowed.
+
+### Pipeline Overview
+
+```
+Backend (Flask routes) → OpenAPI spec → Orval → TypeScript client → Frontend
+```
+
+1. **Backend** defines Flask routes in `app/studio/*_routes.py`
+2. **`scripts/generate_openapi.py`** introspects live Flask routes and generates `openapi.yaml`
+3. **Orval** reads `openapi.yaml` and generates `static/js/studio/client.ts`
+4. **`static/js/studio/api.ts`** wraps the client to extract `.data` from AxiosResponse
+5. **Frontend** imports from `api.ts` only
+
+### Commands
+
+```bash
+# Generate OpenAPI spec only
+pnpm run openapi:generate
+
+# Full pipeline: generate spec + generate TypeScript client
+pnpm run client:generate
+```
+
+### Rules (STRICT - DO NOT BREAK)
+
+1. **NEVER write manual API calls** - All HTTP requests must go through the generated client
+2. **NEVER create/edit `static/js/studio/api.js`** - It was deleted for a reason
+3. **NEVER create manual fetch/axios wrappers** - Use `api.ts` only
+4. **After adding/modifying ANY backend route**, run `pnpm run client:generate` to update the client
+5. **Import from `api.ts`**, not from `client.ts` directly:
+   ```javascript
+   import { client as api } from './api.ts';
+   ```
+6. **All new endpoints** must be defined in Flask route files (`*_routes.py`), not in frontend code
+7. **Path parameters** in Flask routes must use converters for Orval to detect them:
+   - Correct: `/episodes/<int:episode_id>/chunks/<int:chunk_index>/regenerate`
+   - Wrong: `/episodes/<episode_id>/chunks/<chunk_index>/regenerate`
+8. **Use generated method names** - The Orval-generated client uses specific naming patterns:
+   - GET endpoints: `getApiStudio{Resource}{Id}` (e.g., `getApiStudioSourcesSourceId`)
+   - POST endpoints: `postApiStudio{Resource}{Action}` (e.g., `postApiStudioSources`)
+   - PUT endpoints: `putApiStudio{Resource}{Id}` (e.g., `putApiStudioFoldersFolderId`)
+   - DELETE endpoints: `deleteApiStudio{Resource}{Id}` (e.g., `deleteApiStudioTagsTagId`)
+9. **The Proxy auto-extracts `.data`** - Calls like `await api.getApiStudioSettings()` return data directly, no need for `.data`
+10. **URL helpers** - Use exported functions for URL construction:
+    ```javascript
+    import { client as api, chunkAudioUrl, fullEpisodeAudioUrl } from './api.ts';
+    ```
+
+### How to Add a New Endpoint
+
+1. Add the route in the appropriate `app/studio/*_routes.py` file
+2. Run `pnpm run client:generate`
+3. Import and use the new method from `api.ts` in your frontend code
+
+### Files Involved
+
+| File | Purpose | Can Edit? |
+|------|---------|-----------|
+| `scripts/generate_openapi.py` | Generates OpenAPI from Flask routes | Yes |
+| `openapi.yaml` | OpenAPI specification | No (generated) |
+| `orval.config.mjs` | Orval configuration | Yes |
+| `static/js/studio/client.ts` | Generated TypeScript client | NO - Auto-generated |
+| `static/js/studio/api.ts` | Wrapper extracting `.data` | Yes (if needed) |
+
+### Troubleshooting
+
+**"The path params X can't be found in parameters"**
+- The Flask route is missing a converter. Use `<int:id>`, `<uuid:uuid>`, etc.
+
+**"Config require an input target"**
+- Check `orval.config.mjs` has correct `input.target` path
+
+**Module not found: 'flask'**
+- The npm script uses the venv Python: `.venv/bin/python`
+- Verify `.venv` exists and has flask installed
+
+**Frontend shows "Method not found"**
+- You're using a custom method name. Use the Orval-generated name:
+  - Check `static/js/studio/client.ts` for the correct method name
+  - Or run `pnpm run client:generate` to see all available methods

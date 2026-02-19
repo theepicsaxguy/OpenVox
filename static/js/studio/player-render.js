@@ -2,7 +2,7 @@
  * Player rendering functions - mini player, fullscreen player, UI updates
  */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import * as state from './state.js';
 import { toast } from './main.js';
 import { $, formatTime } from './utils.js';
@@ -501,7 +501,7 @@ function showEpisodeMenu(episodeId) {
             icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
             action: async () => {
                 try {
-                    await api.regenerateEpisode(episodeId);
+                    await api.postApiStudioEpisodesEpisodeIdRegenerate(episodeId);
                     toast('Episode regeneration started', 'info');
                 } catch (_) {
                     toast('Failed to start regeneration', 'error');
@@ -524,7 +524,7 @@ async function showEpisodeListSheet() {
     overlay.classList.remove('hidden');
 
     try {
-        const library = await api.getLibrary();
+        const library = (await api.getApiStudioLibraryTree()).data;
         const episodes = library.episodes || [];
         const currentEpisode = playerState.getCurrentEpisode();
 

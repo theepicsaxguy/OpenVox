@@ -5,11 +5,18 @@
   "description": "OpenVox frontend JavaScript",
   "scripts": {
     "lint": "eslint static/js/",
-    "lint:fix": "eslint static/js/ --fix"
+    "lint:fix": "eslint static/js/ --fix",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "openapi:generate": ".venv/bin/python scripts/generate_openapi.py",
+    "client:generate": "pnpm openapi:generate && orval"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@openapitools/openapi-generator-cli": "^2.29.0",
     "@playwright/test": "^1.58.0",
-    "eslint": "^10.0.0"
+    "eslint": "^10.0.0",
+    "orval": "^8.4.0",
+    "yaml": "^2.0.0"
   }
 }

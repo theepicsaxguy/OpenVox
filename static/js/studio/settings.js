@@ -3,7 +3,7 @@
  * Premium Edition
  */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import * as state from './state.js';
 import { toast } from './main.js';
 import { $, escapeHtml } from './utils.js';
@@ -12,7 +12,7 @@ import { $, escapeHtml } from './utils.js';
 
 async function loadSettings() {
     try {
-        const settings = await api.getSettings();
+        const settings = await api.getApiStudioSettings();
         state.set('settings', settings);
         applyToForm(settings);
     } catch (e) {
@@ -96,7 +96,7 @@ async function saveSettings() {
     };
 
     try {
-        await api.updateSettings(data);
+        await api.putApiStudioSettings(data);
         state.set('settings', data);
         applySubtitleSettings(data);
 
@@ -113,7 +113,7 @@ async function saveSettings() {
 
 async function loadTags() {
     try {
-        const tags = await api.listTags();
+        const tags = (await api.getApiStudioTags()).data;
         state.set('tags', tags);
         renderTags(tags);
     } catch (e) {
@@ -136,7 +136,7 @@ function renderTags(tags) {
         chip.querySelector('button').addEventListener('click', async (e) => {
             e.stopPropagation();
             try {
-                await api.deleteTag(tag.id);
+                await api.deleteApiStudioTagsTagId(tag.id);
                 await loadTags();
                 toast('Tag deleted', 'info');
             } catch (err) {
@@ -154,7 +154,7 @@ let _statusInterval = null;
 function startStatusPolling() {
     _statusInterval = setInterval(async () => {
         try {
-            const status = await api.generationStatus();
+            const status = (await api.getApiStudioGenerationStatus()).data;
             updateGenerationStatusUI(status);
         } catch {}
     }, 5000);
@@ -197,7 +197,7 @@ function applySubtitleSettings(settings) {
 
 export async function init() {
     // Load voices first and store in state
-    const voices = await api.listVoices();
+    const voices = (await api.getV1Voices()).data;
     state.set('voices', voices);
 
     // Populate voice select
@@ -219,7 +219,7 @@ export async function init() {
         const name = $('new-tag-name').value.trim();
         if (!name) return;
         try {
-            await api.createTag(name);
+            await api.postApiStudioTags({ name });
             $('new-tag-name').value = '';
             await loadTags();
             toast('Tag created', 'success');
@@ -232,7 +232,7 @@ export async function init() {
         const name = $('new-tag-name-mobile').value.trim();
         if (!name) return;
         try {
-            await api.createTag(name);
+            await api.postApiStudioTags({ name });
             $('new-tag-name-mobile').value = '';
             await loadTags();
             toast('Tag created', 'success');

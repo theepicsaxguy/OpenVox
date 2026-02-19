@@ -2,7 +2,7 @@
  * Player controls - play/pause, seek, volume, speed
  */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import { $, formatTime } from './utils.js';
 import { toast } from './main.js';
 import * as playerState from './player-state.js';
@@ -287,7 +287,7 @@ function savePosition(forcePct) {
             : 0;
     }
 
-    api.savePlayback(episode.id, {
+    api.postApiStudioPlaybackEpisodeId(episode.id, {
         current_chunk_index: currentChunkIndex,
         position_secs: playerState.getAudio() ? playerState.getAudio().currentTime : 0,
         percent_listened: Math.min(100, pct),

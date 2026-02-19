@@ -2,7 +2,7 @@
  * Player state management - core state and playback control
  */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import * as state from './state.js';
 
 let audio = null;
@@ -30,7 +30,7 @@ function setIsFullscreen(value) {
 
 export async function loadEpisode(episodeId, startChunk = null) {
     try {
-        const episode = await api.getEpisode(episodeId);
+        const episode = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
         currentEpisode = episode;
         chunks = (episode.chunks || []).filter(c => c.status === 'ready');
 

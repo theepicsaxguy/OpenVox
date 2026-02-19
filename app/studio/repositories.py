@@ -3,7 +3,7 @@ Database repository layer - abstracts direct SQL queries from route handlers.
 """
 
 import sqlite3
-from typing import Any
+from typing import Any, List
 
 
 class SourceRepository:
@@ -19,7 +19,7 @@ class SourceRepository:
     @staticmethod
     def list(
         db: sqlite3.Connection, folder_id: str | None = None, tag: str | None = None
-    ) -> list[sqlite3.Row]:
+    ) -> List[sqlite3.Row]:
         query = (
             'SELECT s.id, s.title, s.source_type, s.original_url, '
             's.folder_id, s.created_at, s.updated_at, '
@@ -142,7 +142,7 @@ class EpisodeRepository:
         return [r['id'] for r in rows]
 
     @staticmethod
-    def get_by_folder_with_playback(db: sqlite3.Connection, folder_id: str) -> list[sqlite3.Row]:
+    def get_by_folder_with_playback(db: sqlite3.Connection, folder_id: str) -> List[sqlite3.Row]:
         return db.execute(
             'SELECT e.id, e.title, e.status, e.total_duration_secs, e.voice_id, '
             'p.percent_listened, p.current_chunk_index '
@@ -154,7 +154,7 @@ class EpisodeRepository:
         ).fetchall()
 
     @staticmethod
-    def get_folder_playlist_episodes(db: sqlite3.Connection, folder_id: str) -> list[sqlite3.Row]:
+    def get_folder_playlist_episodes(db: sqlite3.Connection, folder_id: str) -> List[sqlite3.Row]:
         return db.execute(
             'SELECT e.id, e.title, e.total_duration_secs, e.voice_id '
             'FROM episodes e '
@@ -166,7 +166,7 @@ class EpisodeRepository:
     @staticmethod
     def list(
         db: sqlite3.Connection, source_id: str | None = None, folder_id: str | None = None
-    ) -> list[sqlite3.Row]:
+    ) -> List[sqlite3.Row]:
         query = (
             'SELECT e.*, p.percent_listened, p.last_played_at '
             'FROM episodes e '
@@ -244,7 +244,7 @@ class EpisodeRepository:
         db.execute('UPDATE episodes SET folder_id = ? WHERE id = ?', (folder_id, episode_id))
 
     @staticmethod
-    def get_by_folder(db: sqlite3.Connection, folder_id: str) -> list[sqlite3.Row]:
+    def get_by_folder(db: sqlite3.Connection, folder_id: str) -> List[sqlite3.Row]:
         return db.execute(
             'SELECT * FROM episodes WHERE folder_id = ? ORDER BY created_at DESC',
             (folder_id,),
@@ -253,7 +253,7 @@ class EpisodeRepository:
 
 class ChunkRepository:
     @staticmethod
-    def get_by_episode(db: sqlite3.Connection, episode_id: str) -> list[sqlite3.Row]:
+    def get_by_episode(db: sqlite3.Connection, episode_id: str) -> List[sqlite3.Row]:
         return db.execute(
             'SELECT id, chunk_index, text, audio_path, duration_secs, status, error_message '
             'FROM chunks WHERE episode_id = ? ORDER BY chunk_index',
@@ -307,7 +307,7 @@ class ChunkRepository:
         db.execute('DELETE FROM chunks WHERE episode_id = ?', (episode_id,))
 
     @staticmethod
-    def get_error_chunks(db: sqlite3.Connection, episode_id: str) -> list[sqlite3.Row]:
+    def get_error_chunks(db: sqlite3.Connection, episode_id: str) -> List[sqlite3.Row]:
         return db.execute(
             "SELECT id, audio_path FROM chunks WHERE episode_id = ? AND status = 'error'",
             (episode_id,),
@@ -316,7 +316,7 @@ class ChunkRepository:
 
 class FolderRepository:
     @staticmethod
-    def get_all(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    def get_all(db: sqlite3.Connection) -> List[sqlite3.Row]:
         return db.execute('SELECT * FROM folders ORDER BY sort_order, name').fetchall()
 
     @staticmethod
@@ -353,7 +353,7 @@ class FolderRepository:
         db.execute('DELETE FROM folders WHERE id = ?', (folder_id,))
 
     @staticmethod
-    def get_children(db: sqlite3.Connection, parent_id: str | None = None) -> list[sqlite3.Row]:
+    def get_children(db: sqlite3.Connection, parent_id: str | None = None) -> List[sqlite3.Row]:
         if parent_id is None:
             return db.execute(
                 'SELECT * FROM folders WHERE parent_id IS NULL ORDER BY sort_order, name'
@@ -365,7 +365,7 @@ class FolderRepository:
 
 class TagRepository:
     @staticmethod
-    def get_all(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    def get_all(db: sqlite3.Connection) -> List[sqlite3.Row]:
         return db.execute('SELECT * FROM tags ORDER BY name').fetchall()
 
     @staticmethod

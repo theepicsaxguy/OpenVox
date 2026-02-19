@@ -3,7 +3,6 @@ Flask routes for the OpenAI-compatible TTS API.
 """
 
 import time
-
 from flask import (
     Blueprint,
     Response,
@@ -14,6 +13,8 @@ from flask import (
     stream_with_context,
 )
 
+from apispec import APISpec
+from apispec.ext.marshmallow import MarshmallowPlugin
 from app.logging_config import get_logger
 from app.services.audio import (
     convert_audio,
@@ -28,6 +29,45 @@ logger = get_logger('routes')
 
 # Create blueprint
 api = Blueprint('api', __name__)
+
+
+@api.route('/openapi.json')
+def openapi_spec():
+    """Serve OpenAPI spec for Orval client generation."""
+    from app.studio import studio_bp
+
+    spec = APISpec(
+        title='OpenVox API',
+        version='1.0.0',
+        openapi_version='3.0.3',
+        plugins=[MarshmallowPlugin()],
+    )
+
+    # Add paths from all blueprints
+    for blueprint in [api, studio_bp]:
+        for rule in blueprint.url_map.iter_rules():
+            if rule.endpoint == 'static' or rule.endpoint.startswith('openapi'):
+                continue
+            path = rule.rule.replace('<', '{').replace('>', '}')
+            methods = [m for m in rule.methods if m not in ('HEAD', 'OPTIONS')]
+            for method in methods:
+                method = method.lower()
+                view_func = blueprint.view_functions.get(rule.endpoint)
+                doc = view_func.__doc__.strip() if view_func and view_func.__doc__ else ''
+                summary = doc.split('\n')[0][:50] if doc else ''
+
+                spec.path(
+                    path=path,
+                    operations={
+                        method: {
+                            'summary': summary,
+                            'description': doc,
+                            'responses': {'200': {'description': 'Success'}},
+                        }
+                    },
+                )
+
+    return jsonify(spec.to_dict())
 
 
 @api.route('/')

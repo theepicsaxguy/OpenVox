@@ -13,7 +13,7 @@
 
 /* global navigator */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import * as state from './state.js';
 import { toast } from './main.js';
 import { $, formatTime } from './utils.js';

@@ -10,14 +10,22 @@ dependencies = [
   "flask>=3.0.0",
   "waitress>=3.0.0",
   "pocket-tts>=1.1.0",
-  "torch>=2.0.0,<=2.8.0",
-  "torchaudio>=2.0.0,<=2.8.0",
   "scipy>=1.10.0",
   "numpy>=1.24.0",
   "soundfile>=0.12.0",
   "trafilatura>=1.12.0",
   "markdown-it-py>=3.0.0",
+  { name = "torch", version = ">=2.0.0", source = { index = "pytorch-cpu" } },
+  { name = "torchaudio", version = ">=2.0.0", source = { index = "pytorch-cpu" } },
 ]
+
+[[tool.uv.index]]
+url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cpu"
+
+[[tool.uv.index]]
+url = "https://pypi.org/simple"
+name = "pypi"
 
 [project.optional-dependencies]
 build = ["pyinstaller"]

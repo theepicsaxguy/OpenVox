@@ -2,7 +2,7 @@
  * Chunk loading and playback
  */
 
-import * as api from './api.js';
+import { client as api } from './api.ts';
 import * as state from './state.js';
 import * as playerState from './player-state.js';
 import { toast } from './main.js';
@@ -12,7 +12,7 @@ let sleepTimerRemaining = 0;
 
 export async function loadEpisode(episodeId, startChunk = null) {
     try {
-        const episode = await api.getEpisode(episodeId);
+        const episode = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
         playerState.setCurrentEpisode(episode);
 
         const chunks = (episode.chunks || []).filter(c => c.status === 'ready');
