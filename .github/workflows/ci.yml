@@ -113,7 +113,7 @@ jobs:
       - name: Determine image tag to use
         id: image
         run: |
-          # For PRs, use pr-XXX or sha-XXX tag (always pushed); for push, use version tag
+          # For PRs, use pr-XXX tag (convenient); sha-XXX also available for stability
           REPO="${{ steps.repo.outputs.name }}"
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "tag=ghcr.io/${REPO}:pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"

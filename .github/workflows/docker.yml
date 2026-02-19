@@ -112,9 +112,9 @@ jobs:
             echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
             echo "Event: push (will push all tags)"
           elif [ "${{ github.event.pull_request.head.repo.full_name }}" == "${{ github.repository }}" ]; then
-            # For internal PRs: push only pr-XXX and sha-XXX tags (for E2E testing)
+            # For internal PRs: push both pr-XXX and sha-XXX tags (for E2E testing)
             echo "push=true" >> "$GITHUB_OUTPUT"
-            TAGS="${REGISTRY}/${REPO}:pr-${{ github.event.pull_request.number }},${REGISTRY}/${REPO}:sha-${{ github.sha }}"
+            TAGS="${REGISTRY}/${REPO}:pr-${{ github.event.pull_request.number }},${REGISTRY}/${REPO}:sha-${{ github.event.pull_request.head.sha }}"
             echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
             echo "Event: internal PR (will push pr-${{ github.event.pull_request.number }} and sha tags)"
           else
@@ -145,7 +145,7 @@ jobs:
       - name: Output image tag
         id: output
         run: |
-          # Use the explicit version tag for pushes, pr-XXX for PRs
+          # Use the explicit version tag for pushes, pr-XXX for PRs (sha-XXX also pushed for caching)
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             IMAGE_TAG="${{ env.REGISTRY }}/${{ steps.repo.outputs.name }}:pr-${{ github.event.pull_request.number }}"
           else
