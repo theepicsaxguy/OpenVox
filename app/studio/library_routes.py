@@ -13,6 +13,7 @@ from app.studio.generation import get_generation_queue
 from app.studio.git_ingestion import preview_git_repository
 from app.studio.ingestion import ingest_url
 from app.studio.normalizer import create_cleaning_options_from_request, normalize_text
+from app.studio.schemas import PreviewChunksBody, PreviewCleanBody, PreviewContentBody, request_body
 
 logger = get_logger('studio.routes.library')
 
@@ -82,6 +83,7 @@ def register_routes(bp) -> None:
         )
 
     @bp.route('/preview-clean', methods=['POST'])
+    @request_body(PreviewCleanBody)
     def preview_clean() -> Response | tuple[Response, int]:
         """Preview normalization without saving."""
         data = request.json
@@ -94,6 +96,7 @@ def register_routes(bp) -> None:
         return jsonify({'cleaned_text': cleaned})
 
     @bp.route('/preview-content', methods=['POST'])
+    @request_body(PreviewContentBody)
     def preview_content() -> Response:
         """Preview content without importing - for URL and git repos."""
         data = request.json
@@ -156,6 +159,7 @@ def register_routes(bp) -> None:
             return jsonify({'error': str(e)}), 500
 
     @bp.route('/preview-chunks', methods=['POST'])
+    @request_body(PreviewChunksBody)
     def preview_chunks() -> Response | tuple[Response, int]:
         """Preview chunking without creating an episode."""
         data = request.json

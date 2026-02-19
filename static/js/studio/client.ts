@@ -11,134 +11,183 @@ import type {
   AxiosResponse
 } from 'axios';
 
-export type PostV1AudioSpeechBody = {
-  input?: string;
-  response_format?: string;
-  stream?: boolean;
+export interface SpeechGenerationBody {
+  /** Text to synthesize */
+  input: string;
+  /** Voice ID or path */
   voice?: string;
-};
+  /** Model name (ignored, for OpenAI compatibility) */
+  model?: string;
+  /** Audio format: mp3, wav, pcm, opus */
+  response_format?: string;
+  /** Enable streaming response */
+  stream?: boolean;
+}
 
-export type PostApiStudioSourcesBodyOne = {
-  file?: Blob;
-};
+export interface CleaningSettings {
+  /** How to handle code blocks: skip, read, summarize */
+  code_block_rule?: string;
+  remove_non_text?: boolean;
+  handle_tables?: boolean;
+  speak_urls?: boolean;
+  expand_abbreviations?: boolean;
+  preserve_parentheses?: boolean;
+  preserve_structure?: boolean;
+  paragraph_spacing?: number;
+  section_spacing?: number;
+  list_item_spacing?: number;
+}
 
-export type PostApiStudioSourcesBodyTwoCleaningSettings = { [key: string]: unknown };
+export interface UrlSettings {
+  /** Use Jina Reader for URL extraction */
+  use_jina?: boolean;
+  /** Fall back to Jina if other methods fail */
+  jina_fallback?: boolean;
+}
 
-export type PostApiStudioSourcesBodyTwoUrlSettings = { [key: string]: unknown };
-
-export type PostApiStudioSourcesBodyTwo = {
-  cleaning_settings?: PostApiStudioSourcesBodyTwoCleaningSettings;
-  git_subpath?: string;
+export interface CreateSourceJsonBody {
+  /** Raw text to import */
+  text?: string;
+  /** Source title */
+  title?: string;
+  /** URL to import content from */
+  url?: string;
+  /** Git repository URL to import */
   git_url?: string;
-  text?: string;
-  title?: string;
-  url?: string;
-  url_settings?: PostApiStudioSourcesBodyTwoUrlSettings;
-};
+  /** Subdirectory path within the git repo */
+  git_subpath?: string;
+  /** Override cleaning options */
+  cleaning_settings?: CleaningSettings;
+  /** URL extraction settings */
+  url_settings?: UrlSettings;
+}
 
-export type PutApiStudioSourcesSourceIdBody = {
+export interface CreateSourceFileBody {
+  /** File to upload (.md, .txt) */
+  file?: string;
+}
+
+export interface SourceCoverUploadBody {
+  /** Cover art image file */
+  cover?: string;
+}
+
+export interface UpdateSourceBody {
+  title?: string;
   cleaned_text?: string;
-  title?: string;
-};
+}
 
-export type PostApiStudioSourcesSourceIdCoverBody = {
-  cover?: Blob;
-};
-
-export type PostApiStudioSourcesSourceIdReCleanBody = { [key: string]: unknown };
-
-export type PutApiStudioSourcesSourceIdMoveBody = {
-  folder_id?: string;
-};
-
-export type PostApiStudioEpisodesBody = {
-  breathing_intensity?: string;
-  chunk_max_length?: number;
-  chunk_strategy?: string;
+export interface ReCleanSourceBody {
   code_block_rule?: string;
-  output_format?: string;
-  source_id?: string;
-  title?: string;
+  remove_non_text?: boolean;
+  handle_tables?: boolean;
+  speak_urls?: boolean;
+  expand_abbreviations?: boolean;
+  preserve_parentheses?: boolean;
+}
+
+export interface MoveToFolderBody {
+  /**
+   * Target folder ID, or null for root
+   * @nullable
+   */
+  folder_id?: string | null;
+}
+
+export interface CreateEpisodeBody {
+  source_id: string;
   voice_id?: string;
-};
-
-export type PutApiStudioEpisodesEpisodeIdBody = {
-  title?: string;
-};
-
-export type PostApiStudioEpisodesEpisodeIdRegenerateWithSettingsBody = {
-  breathing_intensity?: string;
-  chunk_max_length?: number;
+  output_format?: string;
+  /** paragraph, sentence, heading, or fixed */
   chunk_strategy?: string;
+  chunk_max_length?: number;
   code_block_rule?: string;
-  output_format?: string;
+  /** none, light, normal, heavy */
+  breathing_intensity?: string;
+  title?: string;
+}
+
+export interface UpdateEpisodeBody {
+  title?: string;
+}
+
+export interface RegenerateWithSettingsBody {
   voice_id?: string;
-};
+  output_format?: string;
+  chunk_strategy?: string;
+  chunk_max_length?: number;
+  code_block_rule?: string;
+  breathing_intensity?: string;
+}
 
-export type PostApiStudioEpisodesBulkMoveBody = {
-  episode_ids?: string[];
-  folder_id?: string;
-};
+export interface BulkMoveEpisodesBody {
+  episode_ids: string[];
+  /** @nullable */
+  folder_id?: string | null;
+}
 
-export type PostApiStudioEpisodesBulkDeleteBody = {
-  episode_ids?: string[];
-};
+export interface BulkDeleteEpisodesBody {
+  episode_ids: string[];
+}
 
-export type PutApiStudioEpisodesEpisodeIdMoveBody = {
-  folder_id?: string;
-};
-
-export type PostApiStudioFoldersBody = {
+export interface CreateFolderBody {
   name?: string;
-  parent_id?: string;
+  /** @nullable */
+  parent_id?: string | null;
   sort_order?: number;
-};
+}
 
-export type PutApiStudioFoldersFolderIdBody = {
+export interface UpdateFolderBody {
   name?: string;
-  parent_id?: string;
+  /** @nullable */
+  parent_id?: string | null;
   sort_order?: number;
-};
+}
 
-export type PostApiStudioReorderBody = {
-  items?: string[];
-};
-
-export type PostApiStudioTagsBody = {
-  name?: string;
-};
-
-export type PostApiStudioSourcesSourceIdTagsBody = {
-  tag_ids?: string[];
-};
-
-export type PostApiStudioEpisodesEpisodeIdTagsBody = {
-  tag_ids?: string[];
-};
-
-export type PostApiStudioPlaybackEpisodeIdBody = {
-  current_chunk_index?: number;
-  percent_listened?: number;
-  position_secs?: number;
-};
-
-export type PutApiStudioSettingsBody = { [key: string]: unknown };
-
-export type PostApiStudioPreviewCleanBody = {
-  text?: string;
-};
-
-export type PostApiStudioPreviewContentBody = {
-  subpath?: string;
+export interface ReorderItem {
   type?: string;
-  url?: string;
-};
+  id: string;
+  sort_order: number;
+}
 
-export type PostApiStudioPreviewChunksBody = {
-  max_chars?: number;
+export interface ReorderBody {
+  items?: ReorderItem[];
+}
+
+export interface CreateTagBody {
+  name: string;
+}
+
+export interface SetTagsBody {
+  /** Tag IDs to assign (replaces existing) */
+  tag_ids?: string[];
+}
+
+export interface SavePlaybackBody {
+  current_chunk_index?: number;
+  position_secs?: number;
+  percent_listened?: number;
+}
+
+export interface UpdateSettingsBody { [key: string]: unknown }
+
+export interface PreviewCleanBody {
+  text: string;
+  code_block_rule?: string;
+}
+
+export interface PreviewContentBody {
+  /** Content type: url or git */
+  type: string;
+  url?: string;
+  subpath?: string;
+}
+
+export interface PreviewChunksBody {
+  text: string;
   strategy?: string;
-  text?: string;
-};
+  max_chars?: number;
+}
 
 export const getOpenVoxAPI = (axiosInstance: AxiosInstance = axios) => {
 /**
@@ -208,11 +257,11 @@ const getV1Voices = (
  * @summary OpenAI-compatible speech generation endpoint.
  */
 const postV1AudioSpeech = (
-    postV1AudioSpeechBody: PostV1AudioSpeechBody, options?: AxiosRequestConfig
+    speechGenerationBody: SpeechGenerationBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/v1/audio/speech`,
-      postV1AudioSpeechBody,options
+      speechGenerationBody,options
     );
   }
 
@@ -221,7 +270,7 @@ const postV1AudioSpeech = (
  * @summary Upload file, submit URL, paste text, or import git
  */
 const postApiStudioSources = (
-    postApiStudioSourcesBody: PostApiStudioSourcesBodyOne | PostApiStudioSourcesBodyTwo, options?: AxiosRequestConfig
+    postApiStudioSourcesBody: CreateSourceJsonBody | CreateSourceFileBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/sources`,
@@ -259,11 +308,11 @@ const getApiStudioSourcesSourceId = (
  */
 const putApiStudioSourcesSourceId = (
     sourceId: string,
-    putApiStudioSourcesSourceIdBody: PutApiStudioSourcesSourceIdBody, options?: AxiosRequestConfig
+    updateSourceBody: UpdateSourceBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/sources/${sourceId}`,
-      putApiStudioSourcesSourceIdBody,options
+      updateSourceBody,options
     );
   }
 
@@ -297,10 +346,10 @@ const getApiStudioSourcesSourceIdCover = (
  */
 const postApiStudioSourcesSourceIdCover = (
     sourceId: string,
-    postApiStudioSourcesSourceIdCoverBody: PostApiStudioSourcesSourceIdCoverBody, options?: AxiosRequestConfig
+    sourceCoverUploadBody: SourceCoverUploadBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {const formData = new FormData();
-if(postApiStudioSourcesSourceIdCoverBody.cover !== undefined) {
- formData.append(`cover`, postApiStudioSourcesSourceIdCoverBody.cover);
+if(sourceCoverUploadBody.cover !== undefined) {
+ formData.append(`cover`, sourceCoverUploadBody.cover);
  }
 
     return axiosInstance.post(
@@ -315,11 +364,11 @@ if(postApiStudioSourcesSourceIdCoverBody.cover !== undefined) {
  */
 const postApiStudioSourcesSourceIdReClean = (
     sourceId: string,
-    postApiStudioSourcesSourceIdReCleanBody: PostApiStudioSourcesSourceIdReCleanBody, options?: AxiosRequestConfig
+    reCleanSourceBody: ReCleanSourceBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/sources/${sourceId}/re-clean`,
-      postApiStudioSourcesSourceIdReCleanBody,options
+      reCleanSourceBody,options
     );
   }
 
@@ -329,11 +378,11 @@ const postApiStudioSourcesSourceIdReClean = (
  */
 const putApiStudioSourcesSourceIdMove = (
     sourceId: string,
-    putApiStudioSourcesSourceIdMoveBody: PutApiStudioSourcesSourceIdMoveBody, options?: AxiosRequestConfig
+    moveToFolderBody: MoveToFolderBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/sources/${sourceId}/move`,
-      putApiStudioSourcesSourceIdMoveBody,options
+      moveToFolderBody,options
     );
   }
 
@@ -342,11 +391,11 @@ const putApiStudioSourcesSourceIdMove = (
  * @summary Create an episode — chunk text and enqueue generat
  */
 const postApiStudioEpisodes = (
-    postApiStudioEpisodesBody: PostApiStudioEpisodesBody, options?: AxiosRequestConfig
+    createEpisodeBody: CreateEpisodeBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/episodes`,
-      postApiStudioEpisodesBody,options
+      createEpisodeBody,options
     );
   }
 
@@ -380,11 +429,11 @@ const getApiStudioEpisodesEpisodeId = (
  */
 const putApiStudioEpisodesEpisodeId = (
     episodeId: string,
-    putApiStudioEpisodesEpisodeIdBody: PutApiStudioEpisodesEpisodeIdBody, options?: AxiosRequestConfig
+    updateEpisodeBody: UpdateEpisodeBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/episodes/${episodeId}`,
-      putApiStudioEpisodesEpisodeIdBody,options
+      updateEpisodeBody,options
     );
   }
 
@@ -418,11 +467,11 @@ const postApiStudioEpisodesEpisodeIdRegenerate = (
  */
 const postApiStudioEpisodesEpisodeIdRegenerateWithSettings = (
     episodeId: string,
-    postApiStudioEpisodesEpisodeIdRegenerateWithSettingsBody: PostApiStudioEpisodesEpisodeIdRegenerateWithSettingsBody, options?: AxiosRequestConfig
+    regenerateWithSettingsBody: RegenerateWithSettingsBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/episodes/${episodeId}/regenerate-with-settings`,
-      postApiStudioEpisodesEpisodeIdRegenerateWithSettingsBody,options
+      regenerateWithSettingsBody,options
     );
   }
 
@@ -443,11 +492,11 @@ const postApiStudioUndoUndoId = (
  * @summary Move multiple episodes to a folder.
  */
 const postApiStudioEpisodesBulkMove = (
-    postApiStudioEpisodesBulkMoveBody: PostApiStudioEpisodesBulkMoveBody, options?: AxiosRequestConfig
+    bulkMoveEpisodesBody: BulkMoveEpisodesBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/episodes/bulk-move`,
-      postApiStudioEpisodesBulkMoveBody,options
+      bulkMoveEpisodesBody,options
     );
   }
 
@@ -456,11 +505,11 @@ const postApiStudioEpisodesBulkMove = (
  * @summary Delete multiple episodes.
  */
 const postApiStudioEpisodesBulkDelete = (
-    postApiStudioEpisodesBulkDeleteBody: PostApiStudioEpisodesBulkDeleteBody, options?: AxiosRequestConfig
+    bulkDeleteEpisodesBody: BulkDeleteEpisodesBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/episodes/bulk-delete`,
-      postApiStudioEpisodesBulkDeleteBody,options
+      bulkDeleteEpisodesBody,options
     );
   }
 
@@ -532,11 +581,11 @@ const getApiStudioEpisodesEpisodeIdAudioFull = (
  */
 const putApiStudioEpisodesEpisodeIdMove = (
     episodeId: string,
-    putApiStudioEpisodesEpisodeIdMoveBody: PutApiStudioEpisodesEpisodeIdMoveBody, options?: AxiosRequestConfig
+    moveToFolderBody: MoveToFolderBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/episodes/${episodeId}/move`,
-      putApiStudioEpisodesEpisodeIdMoveBody,options
+      moveToFolderBody,options
     );
   }
 
@@ -545,11 +594,11 @@ const putApiStudioEpisodesEpisodeIdMove = (
  * @summary Create a new folder.
  */
 const postApiStudioFolders = (
-    postApiStudioFoldersBody: PostApiStudioFoldersBody, options?: AxiosRequestConfig
+    createFolderBody: CreateFolderBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/folders`,
-      postApiStudioFoldersBody,options
+      createFolderBody,options
     );
   }
 
@@ -559,11 +608,11 @@ const postApiStudioFolders = (
  */
 const putApiStudioFoldersFolderId = (
     folderId: string,
-    putApiStudioFoldersFolderIdBody: PutApiStudioFoldersFolderIdBody, options?: AxiosRequestConfig
+    updateFolderBody: UpdateFolderBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/folders/${folderId}`,
-      putApiStudioFoldersFolderIdBody,options
+      updateFolderBody,options
     );
   }
 
@@ -608,11 +657,11 @@ const getApiStudioFoldersFolderIdEpisodes = (
  * @summary Batch update sort orders.
  */
 const postApiStudioReorder = (
-    postApiStudioReorderBody: PostApiStudioReorderBody, options?: AxiosRequestConfig
+    reorderBody: ReorderBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/reorder`,
-      postApiStudioReorderBody,options
+      reorderBody,options
     );
   }
 
@@ -633,11 +682,11 @@ const getApiStudioTags = (
  * @summary Create a tag.
  */
 const postApiStudioTags = (
-    postApiStudioTagsBody: PostApiStudioTagsBody, options?: AxiosRequestConfig
+    createTagBody: CreateTagBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/tags`,
-      postApiStudioTagsBody,options
+      createTagBody,options
     );
   }
 
@@ -659,11 +708,11 @@ const deleteApiStudioTagsTagId = (
  */
 const postApiStudioSourcesSourceIdTags = (
     sourceId: string,
-    postApiStudioSourcesSourceIdTagsBody: PostApiStudioSourcesSourceIdTagsBody, options?: AxiosRequestConfig
+    setTagsBody: SetTagsBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/sources/${sourceId}/tags`,
-      postApiStudioSourcesSourceIdTagsBody,options
+      setTagsBody,options
     );
   }
 
@@ -673,11 +722,11 @@ const postApiStudioSourcesSourceIdTags = (
  */
 const postApiStudioEpisodesEpisodeIdTags = (
     episodeId: string,
-    postApiStudioEpisodesEpisodeIdTagsBody: PostApiStudioEpisodesEpisodeIdTagsBody, options?: AxiosRequestConfig
+    setTagsBody: SetTagsBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/episodes/${episodeId}/tags`,
-      postApiStudioEpisodesEpisodeIdTagsBody,options
+      setTagsBody,options
     );
   }
 
@@ -699,11 +748,11 @@ const getApiStudioPlaybackEpisodeId = (
  */
 const postApiStudioPlaybackEpisodeId = (
     episodeId: string,
-    postApiStudioPlaybackEpisodeIdBody: PostApiStudioPlaybackEpisodeIdBody, options?: AxiosRequestConfig
+    savePlaybackBody: SavePlaybackBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/playback/${episodeId}`,
-      postApiStudioPlaybackEpisodeIdBody,options
+      savePlaybackBody,options
     );
   }
 
@@ -724,11 +773,11 @@ const getApiStudioSettings = (
  * @summary Update settings (key-value pairs).
  */
 const putApiStudioSettings = (
-    putApiStudioSettingsBody: PutApiStudioSettingsBody, options?: AxiosRequestConfig
+    updateSettingsBody: UpdateSettingsBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.put(
       `/api/studio/settings`,
-      putApiStudioSettingsBody,options
+      updateSettingsBody,options
     );
   }
 
@@ -761,11 +810,11 @@ const getApiStudioLibraryTree = (
  * @summary Preview normalization without saving.
  */
 const postApiStudioPreviewClean = (
-    postApiStudioPreviewCleanBody: PostApiStudioPreviewCleanBody, options?: AxiosRequestConfig
+    previewCleanBody: PreviewCleanBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/preview-clean`,
-      postApiStudioPreviewCleanBody,options
+      previewCleanBody,options
     );
   }
 
@@ -774,11 +823,11 @@ const postApiStudioPreviewClean = (
  * @summary Preview content without importing - for URL and gi
  */
 const postApiStudioPreviewContent = (
-    postApiStudioPreviewContentBody: PostApiStudioPreviewContentBody, options?: AxiosRequestConfig
+    previewContentBody: PreviewContentBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/preview-content`,
-      postApiStudioPreviewContentBody,options
+      previewContentBody,options
     );
   }
 
@@ -787,11 +836,11 @@ const postApiStudioPreviewContent = (
  * @summary Preview chunking without creating an episode.
  */
 const postApiStudioPreviewChunks = (
-    postApiStudioPreviewChunksBody: PostApiStudioPreviewChunksBody, options?: AxiosRequestConfig
+    previewChunksBody: PreviewChunksBody, options?: AxiosRequestConfig
  ): Promise<AxiosResponse<void>> => {
     return axiosInstance.post(
       `/api/studio/preview-chunks`,
-      postApiStudioPreviewChunksBody,options
+      previewChunksBody,options
     );
   }
 

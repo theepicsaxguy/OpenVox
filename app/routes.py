@@ -26,6 +26,7 @@ from app.services.audio import (
     write_wav_header,
 )
 from app.services.tts import get_tts_service
+from app.studio.schemas import SpeechGenerationBody, request_body
 
 logger = get_logger('routes')
 
@@ -131,6 +132,7 @@ def list_voices():
 
 
 @api.route('/v1/audio/speech', methods=['POST'])
+@request_body(SpeechGenerationBody)
 def generate_speech():
     """
     OpenAI-compatible speech generation endpoint.

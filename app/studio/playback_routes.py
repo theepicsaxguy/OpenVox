@@ -6,6 +6,7 @@ from flask import Response, jsonify, request
 
 from app.logging_config import get_logger
 from app.studio.db import get_db
+from app.studio.schemas import SavePlaybackBody, request_body
 
 logger = get_logger('studio.routes.playback')
 
@@ -37,6 +38,7 @@ def register_routes(bp) -> None:
         return jsonify(dict(row))
 
     @bp.route('/playback/<episode_id>', methods=['POST'])
+    @request_body(SavePlaybackBody)
     def save_playback(episode_id: str) -> Response | tuple[Response, int]:
         """Save playback position."""
         data = request.json

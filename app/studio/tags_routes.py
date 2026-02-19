@@ -9,6 +9,7 @@ from flask import Response, jsonify, request
 from app.logging_config import get_logger
 from app.studio.db import get_db
 from app.studio.repositories import TagRepository
+from app.studio.schemas import CreateTagBody, SetTagsBody, request_body
 
 logger = get_logger('studio.routes.tags')
 
@@ -24,6 +25,7 @@ def register_routes(bp) -> None:
         return jsonify([dict(r) for r in rows])
 
     @bp.route('/tags', methods=['POST'])
+    @request_body(CreateTagBody)
     def create_tag() -> Response | tuple[Response, int]:
         """Create a tag."""
         data = request.json
@@ -50,6 +52,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True})
 
     @bp.route('/sources/<source_id>/tags', methods=['POST'])
+    @request_body(SetTagsBody)
     def set_source_tags(source_id: str) -> Response:
         """Set tags for a source (replaces all existing)."""
         data = request.json
@@ -61,6 +64,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True})
 
     @bp.route('/episodes/<episode_id>/tags', methods=['POST'])
+    @request_body(SetTagsBody)
     def set_episode_tags(episode_id: str) -> Response:
         """Set tags for an episode (replaces all existing)."""
         data = request.json

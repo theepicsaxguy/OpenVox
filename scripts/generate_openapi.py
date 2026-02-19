@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
-"""Generate OpenAPI spec - mocks ML deps before app import."""
+"""Generate OpenAPI spec from Flask routes and Marshmallow schemas.
+
+Mocks ML dependencies (torch, numpy, etc.) so the script runs without
+a GPU or heavy packages installed — only Flask, apispec, marshmallow,
+and pyyaml are needed.
+
+The spec is built by:
+  1. Creating the Flask app and registering all blueprints
+  2. Iterating over url_map rules
+  3. Reading `_request_schemas` set by @request_body decorators
+  4. Letting apispec's MarshmallowPlugin resolve schemas to JSON Schema
+"""
 
 import os
+import re
 import sys
 import types
+
+# ── Mock heavy ML dependencies before any app imports ────────────────
 
 
 class DummyModule(types.ModuleType):
@@ -25,7 +39,6 @@ class DummyModule(types.ModuleType):
         return iter([])
 
 
-# Install top-level and common submodules
 for name in ['torch', 'torchaudio', 'scipy', 'soundfile', 'numpy']:
     sys.modules[name] = DummyModule(name)
 
@@ -38,9 +51,6 @@ for mod in ['scipy.signal', 'scipy.io', 'numpy.core', 'torch.nn', 'torch.Tensor'
         full = '.'.join(parts[: i + 1])
         sys.modules[full] = parent
 
-import inspect  # noqa: E402
-import re  # noqa: E402
-import textwrap  # noqa: E402
 
 import yaml  # noqa: E402
 from apispec import APISpec  # noqa: E402
@@ -48,6 +58,9 @@ from apispec.ext.marshmallow import MarshmallowPlugin  # noqa: E402
 from flask import Flask  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+# ── Flask path converter → OpenAPI type mapping ─────────────────────
 
 CONVERTER_TYPE_MAP = {
     'int': {'type': 'integer'},
@@ -59,11 +72,7 @@ CONVERTER_TYPE_MAP = {
 
 
 def convert_flask_path(path: str) -> tuple[str, dict[str, dict]]:
-    """Convert Flask path with converters to OpenAPI format.
-
-    Returns (openapi_path, param_type_schemas) where param_type_schemas
-    maps parameter names to their OpenAPI schema dicts.
-    """
+    """Convert ``/items/<int:id>`` to ``/items/{id}`` and extract param types."""
     param_types: dict[str, dict] = {}
 
     def replace_param(match):
@@ -80,8 +89,7 @@ def convert_flask_path(path: str) -> tuple[str, dict[str, dict]]:
 
 
 def build_path_params(path: str, param_types: dict[str, dict]) -> list[dict]:
-    """Build OpenAPI parameter objects for path parameters."""
-    names = re.findall(r'\{(\w+)\}', path)
+    """Build OpenAPI parameter objects for each ``{name}`` in *path*."""
     return [
         {
             'name': n,
@@ -89,115 +97,15 @@ def build_path_params(path: str, param_types: dict[str, dict]) -> list[dict]:
             'required': True,
             'schema': param_types.get(n, {'type': 'string'}),
         }
-        for n in names
+        for n in re.findall(r'\{(\w+)\}', path)
     ]
 
 
-def extract_request_body(view_func) -> dict | None:
-    """Extract request body schema from a Flask view function's source code.
-
-    Inspects the function source for request.json and request.files usage
-    and generates the appropriate OpenAPI requestBody definition.
-    """
-    try:
-        source = textwrap.dedent(inspect.getsource(view_func))
-    except (OSError, TypeError):
-        return None
-
-    uses_files = 'request.files' in source
-    uses_json = 'request.json' in source
-
-    if not uses_json and not uses_files:
-        return None
-
-    content: dict[str, dict] = {}
-
-    if uses_files:
-        file_fields: set[str] = set()
-        for m in re.finditer(r"request\.files\[['\"](\w+)['\"]\]", source):
-            file_fields.add(m.group(1))
-        for m in re.finditer(r"['\"](\w+)['\"]\s+in\s+request\.files", source):
-            file_fields.add(m.group(1))
-
-        schema: dict = {'type': 'object'}
-        if file_fields:
-            schema['properties'] = {
-                f: {'type': 'string', 'format': 'binary'} for f in sorted(file_fields)
-            }
-        content['multipart/form-data'] = {'schema': schema}
-
-    if uses_json:
-        properties: dict[str, dict] = {}
-
-        has_alias = bool(re.search(r'\bdata\s*=\s*request\.json', source))
-
-        get_patterns = [r"request\.json\.get\(['\"](\w+)['\"]"]
-        sub_patterns = [r"request\.json\[['\"](\w+)['\"]\]"]
-
-        if has_alias:
-            get_patterns.append(r"(?<!\w)data\.get\(['\"](\w+)['\"]")
-            sub_patterns.append(r"(?<!\w)data\[['\"](\w+)['\"]\]")
-
-        for pattern in get_patterns + sub_patterns:
-            for m in re.finditer(pattern, source):
-                name = m.group(1)
-                if name not in properties:
-                    properties[name] = _infer_field_type(name, source, has_alias)
-
-        if has_alias:
-            for m in re.finditer(r"['\"](\w+)['\"]\s+in\s+data(?:\b|[^.])", source):
-                name = m.group(1)
-                if name not in properties:
-                    properties[name] = _infer_field_type(name, source, has_alias)
-
-        allowed_match = re.search(r'allowed_fields\s*=\s*\[([^\]]+)\]', source)
-        if allowed_match:
-            for m in re.finditer(r"['\"](\w+)['\"]", allowed_match.group(1)):
-                name = m.group(1)
-                if name not in properties:
-                    properties[name] = _infer_field_type(name, source, has_alias)
-
-        schema = {'type': 'object'}
-        if properties:
-            schema['properties'] = {k: properties[k] for k in sorted(properties)}
-        content['application/json'] = {'schema': schema}
-
-    return {'content': content} if content else None
+# ── Spec generation ─────────────────────────────────────────────────
 
 
-def _infer_field_type(name: str, source: str, has_alias: bool) -> dict:
-    """Infer the OpenAPI type of a JSON body field from its usage context."""
-    if name.endswith('_secs') or 'percent' in name:
-        return {'type': 'number'}
-    if name.endswith('_ids') or name == 'items':
-        return {'type': 'array', 'items': {'type': 'string'}}
-
-    patterns = [r"request\.json\.get\(['\"]" + re.escape(name) + r"['\"],\s*(.+?)\)"]
-    if has_alias:
-        patterns.append(r"(?<!\w)data\.get\(['\"]" + re.escape(name) + r"['\"],\s*(.+?)\)")
-
-    for pattern in patterns:
-        m = re.search(pattern, source)
-        if m:
-            default = m.group(1).strip()
-            if default.startswith('['):
-                return {'type': 'array', 'items': {'type': 'string'}}
-            if default.startswith('{'):
-                return {'type': 'object'}
-            if default in ('True', 'False'):
-                return {'type': 'boolean'}
-            if re.match(r'^-?\d+$', default):
-                return {'type': 'integer'}
-            if re.match(r'^-?\d+\.\d+$', default):
-                return {'type': 'number'}
-
-    if any(s in name for s in ('length', 'order', 'index', 'count', 'max_chars')):
-        return {'type': 'integer'}
-
-    return {'type': 'string'}
-
-
-def generate_spec() -> dict:
+def create_app() -> Flask:
+    """Build the Flask app with all blueprints (no server start)."""
     from app.config import Config
     from app.logging_config import setup_logging
 
@@ -234,6 +142,12 @@ def generate_spec() -> dict:
     library_routes.register_routes(studio_bp)
     app.register_blueprint(studio_bp)
 
+    return app
+
+
+def generate_spec() -> dict:
+    app = create_app()
+
     spec = APISpec(
         title='OpenVox API',
         version='1.0.0',
@@ -241,20 +155,24 @@ def generate_spec() -> dict:
         plugins=[MarshmallowPlugin()],
     )
 
+    warnings: list[str] = []
+    stats = {'post_put': 0, 'with_body': 0}
+
     for rule in app.url_map.iter_rules():
         if rule.endpoint == 'static':
             continue
 
         path, param_types = convert_flask_path(rule.rule)
         methods = [m for m in rule.methods if m not in ('HEAD', 'OPTIONS')]
-
         if not methods:
             continue
 
+        view_func = app.view_functions.get(rule.endpoint)
+        schemas = getattr(view_func, '_request_schemas', {})
+
         operations: dict = {}
         for method in methods:
-            view_func = app.view_functions.get(rule.endpoint)
-            doc = (view_func.__doc__ or '').strip()
+            doc = (view_func.__doc__ or '').strip() if view_func else ''
             summary = doc.split('\n')[0][:50] if doc else ''
 
             operation: dict = {
@@ -267,40 +185,42 @@ def generate_spec() -> dict:
             if params:
                 operation['parameters'] = params
 
-            if method in ('POST', 'PUT', 'PATCH') and view_func:
-                body = extract_request_body(view_func)
-                if body:
-                    operation['requestBody'] = body
+            if method in ('POST', 'PUT', 'PATCH'):
+                stats['post_put'] += 1
+                if schemas:
+                    stats['with_body'] += 1
+                    content: dict = {}
+                    for content_type, schema_class in schemas.items():
+                        content[content_type] = {'schema': schema_class}
+                    operation['requestBody'] = {'content': content}
+                else:
+                    warnings.append(f'  {method} {path} — no @request_body schema')
 
             operations[method.lower()] = operation
 
         if operations:
             spec.path(path=path, operations=operations)
 
-    return spec.to_dict()
+    return spec.to_dict(), warnings, stats
 
 
 def main():
     output_path = sys.argv[1] if len(sys.argv) > 1 else 'openapi.yaml'
-    spec = generate_spec()
+    spec, warnings, stats = generate_spec()
 
     with open(output_path, 'w') as f:
         yaml.dump(spec, f, default_flow_style=False, sort_keys=False)
 
     print(f'Generated: {output_path}')
-    print(f'  - Paths: {len(spec.get("paths", {}))}')
+    print(f'  Paths: {len(spec.get("paths", {}))}')
+    print(f'  Schemas: {len(spec.get("components", {}).get("schemas", {}))}')
+    print(f'  POST/PUT/PATCH: {stats["post_put"]}')
+    print(f'  With requestBody: {stats["with_body"]}')
 
-    post_put_count = 0
-    body_count = 0
-    for path_ops in spec.get('paths', {}).values():
-        for method in ('post', 'put', 'patch'):
-            if method in path_ops:
-                post_put_count += 1
-                if 'requestBody' in path_ops[method]:
-                    body_count += 1
-
-    print(f'  - POST/PUT operations: {post_put_count}')
-    print(f'  - With requestBody: {body_count}')
+    if warnings:
+        print(f'\n  Bodyless POST/PUT/PATCH endpoints ({len(warnings)}):')
+        for w in warnings:
+            print(w)
 
 
 if __name__ == '__main__':
