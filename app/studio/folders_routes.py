@@ -13,6 +13,7 @@ from app.config import Config
 from app.logging_config import get_logger
 from app.studio.db import get_db
 from app.studio.repositories import ChunkRepository, EpisodeRepository
+from app.studio.schemas import CreateFolderBody, ReorderBody, UpdateFolderBody, request_body
 
 logger = get_logger('studio.routes.folders')
 
@@ -21,6 +22,7 @@ def register_routes(bp) -> None:
     """Register folder routes on the blueprint."""
 
     @bp.route('/folders', methods=['POST'])
+    @request_body(CreateFolderBody)
     def create_folder() -> Response | tuple[Response, int]:
         """Create a new folder."""
         data = request.json
@@ -40,6 +42,7 @@ def register_routes(bp) -> None:
         return jsonify({'id': folder_id}), 201
 
     @bp.route('/folders/<folder_id>', methods=['PUT'])
+    @request_body(UpdateFolderBody)
     def update_folder(folder_id: str) -> Response | tuple[Response, int]:
         """Rename or move a folder."""
         data = request.json
@@ -132,6 +135,7 @@ def register_routes(bp) -> None:
         return jsonify([dict(ep) for ep in episodes])
 
     @bp.route('/reorder', methods=['POST'])
+    @request_body(ReorderBody)
     def reorder() -> Response:
         """Batch update sort orders."""
         data = request.json

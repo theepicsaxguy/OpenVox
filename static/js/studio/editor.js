@@ -128,7 +128,7 @@ function initImportView() {
             if (activeTab === 'paste') {
                 const text = document.getElementById('import-text').value.trim();
                 if (!text) return toast('Enter some text first', 'error');
-                const result = (await api.postApiStudioPreviewClean({ text, code_block_rule: rule })).data;
+                const result = await api.postApiStudioPreviewClean({ text, code_block_rule: rule });
                 rawText = text;
                 cleanedText = result.cleaned_text;
                 title = document.getElementById('import-title').value.trim() || null;
@@ -138,7 +138,7 @@ function initImportView() {
                 if (!fileInput.files.length) return toast('Select a file first', 'error');
                 const file = fileInput.files[0];
                 const text = await file.text();
-                const result = (await api.postApiStudioPreviewClean({ text, code_block_rule: rule })).data;
+                const result = await api.postApiStudioPreviewClean({ text, code_block_rule: rule });
                 rawText = text;
                 cleanedText = result.cleaned_text;
                 title = file.name;
@@ -146,7 +146,7 @@ function initImportView() {
             } else if (activeTab === 'url') {
                 const url = document.getElementById('import-url').value.trim();
                 if (!url) return toast('Enter a URL first', 'error');
-                const result = (await api.postApiStudioPreviewContent({ type: 'url', url })).data;
+                const result = await api.postApiStudioPreviewContent({ type: 'url', url });
                 rawText = result.raw_text;
                 cleanedText = result.cleaned_text;
                 title = result.title;
@@ -155,7 +155,7 @@ function initImportView() {
                 const url = document.getElementById('import-git-url').value.trim();
                 if (!url) return toast('Enter a git repository URL first', 'error');
                 const subpath = document.getElementById('import-git-subpath').value.trim() || null;
-                const result = (await api.postApiStudioPreviewContent({ type: 'git', url, subpath })).data;
+                const result = await api.postApiStudioPreviewContent({ type: 'git', url, subpath });
                 rawText = result.preview_text;
                 cleanedText = result.preview_text;
                 title = result.suggested_title;
@@ -222,24 +222,24 @@ async function doImport() {
             const text = document.getElementById('import-text').value.trim();
             const title = document.getElementById('import-title').value.trim();
             if (!text) return toast('Enter some text', 'error');
-            result = (await api.postApiStudioSources({ text, title, cleaning_settings: { code_block_rule: rule } })).data;
+            result = await api.postApiStudioSources({ text, title, cleaning_settings: { code_block_rule: rule } });
         } else if (activeTab === 'file') {
             const fileInput = document.getElementById('import-file');
             if (!fileInput.files.length) return toast('Select a file', 'error');
             const form = new FormData();
             form.append('file', fileInput.files[0]);
             form.append('code_block_rule', rule);
-            result = (await api.postApiStudioSources(form)).data;
+            result = await api.postApiStudioSources(form);
         } else if (activeTab === 'url') {
             const url = document.getElementById('import-url').value.trim();
             if (!url) return toast('Enter a URL', 'error');
             const urlExtractionMethod = (settings.url_extraction_method || 'jina');
-            result = (await api.postApiStudioSources({ url, url_settings: { use_jina: urlExtractionMethod === 'jina', jina_fallback: false }, cleaning_settings: { code_block_rule: rule } })).data;
+            result = await api.postApiStudioSources({ url, url_settings: { use_jina: urlExtractionMethod === 'jina', jina_fallback: false }, cleaning_settings: { code_block_rule: rule } });
         } else if (activeTab === 'git') {
             const url = document.getElementById('import-git-url').value.trim();
             if (!url) return toast('Enter a git repository URL', 'error');
             const subpath = document.getElementById('import-git-subpath').value.trim() || null;
-            result = (await api.postApiStudioSources({ git_url: url, git_subpath: subpath, cleaning_settings: { code_block_rule: rule } })).data;
+            result = await api.postApiStudioSources({ git_url: url, git_subpath: subpath, cleaning_settings: { code_block_rule: rule } });
         }
 
         toast(`Imported: ${result.title}`, 'success');
@@ -268,7 +268,7 @@ async function loadReview(sourceId) {
     showView('review');
 
     try {
-        const source = (await api.getApiStudioSourcesSourceId(sourceId)).data;
+        const source = await api.getApiStudioSourcesSourceId(sourceId);
 
         document.getElementById('review-title').textContent = source.title;
         document.getElementById('review-breadcrumb').textContent = source.title;
@@ -311,15 +311,8 @@ async function loadReview(sourceId) {
             const file = coverInput.files[0];
             if (!file) return;
 
-            const formData = new FormData();
-            formData.append('cover', file);
-
             try {
-                const res = await fetch(`/api/studio/sources/${sourceId}/cover`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Upload failed');
+                await api.postApiStudioSourcesSourceIdCover(sourceId, { cover: file });
 
                 coverImage.src = `/api/studio/sources/${sourceId}/cover?t=${Date.now()}`;
                 coverImage.onload = () => {
@@ -367,12 +360,12 @@ function initReviewView() {
     // Preview chunks
     document.getElementById('btn-review-preview-chunks').addEventListener('click', async () => {
         const id = state.get('currentSourceId');
-        const source = (await api.getApiStudioSourcesSourceId(id)).data;
+        const source = await api.getApiStudioSourcesSourceId(id);
         const strategy = document.getElementById('review-strategy').value;
         const maxChars = parseInt(document.getElementById('review-max-chars').value);
 
         try {
-            const result = (await api.postApiStudioPreviewChunks({ text: source.cleaned_text, strategy, max_chars: maxChars })).data;
+            const result = await api.postApiStudioPreviewChunks({ text: source.cleaned_text, strategy, max_chars: maxChars });
             renderChunkPreview(result.chunks, 'review');
         } catch (e) {
             toast(e.message, 'error');
@@ -404,7 +397,7 @@ function initReviewView() {
         };
 
         try {
-            const result = (await api.postApiStudioEpisodes(data)).data;
+            const result = await api.postApiStudioEpisodes(data);
             toast(`Episode created (${result.chunk_count} chunks). Generating...`, 'success');
             refreshTree();
             window.location.hash = `#episode/${result.id}`;
@@ -442,7 +435,7 @@ function initReviewView() {
             };
 
             try {
-                const result = (await api.postApiStudioEpisodes(data)).data;
+                const result = await api.postApiStudioEpisodes(data);
                 toast(`Episode created (${result.chunk_count} chunks). Generating...`, 'success');
                 refreshTree();
                 window.location.hash = `#episode/${result.id}`;
@@ -534,7 +527,7 @@ async function loadSource(sourceId) {
     showView('source');
 
     try {
-        const source = (await api.getApiStudioSourcesSourceId(sourceId)).data;
+        const source = await api.getApiStudioSourcesSourceId(sourceId);
 
         document.getElementById('source-title').textContent = source.title;
         document.getElementById('source-breadcrumb').textContent = source.title;
@@ -623,7 +616,7 @@ function initSourceView() {
         const id = state.get('currentSourceId');
         const rule = document.getElementById('source-reclean-rule').value;
         try {
-            const result = (await api.postApiStudioSourcesSourceIdReClean(id, { code_block_rule: rule })).data;
+            const result = await api.postApiStudioSourcesSourceIdReClean(id, { code_block_rule: rule });
             document.getElementById('source-cleaned-text').textContent = result.cleaned_text;
             toast('Text re-cleaned', 'success');
         } catch (e) {
@@ -672,14 +665,14 @@ async function loadEpisode(episodeId) {
     clearInterval(episodeRefreshInterval);
 
     try {
-        const episode = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
+        const episode = await api.getApiStudioEpisodesEpisodeId(episodeId);
         renderEpisode(episode);
 
         // Auto-refresh while generating
         if (episode.status === 'pending' || episode.status === 'generating') {
             episodeRefreshInterval = setInterval(async () => {
                 try {
-                    const fresh = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
+                    const fresh = await api.getApiStudioEpisodesEpisodeId(episodeId);
                     renderEpisode(fresh);
                     if (fresh.status !== 'pending' && fresh.status !== 'generating') {
                         clearInterval(episodeRefreshInterval);
@@ -906,7 +899,7 @@ function initEpisodeView() {
         if (strategy) settings.chunk_strategy = strategy;
 
         try {
-            const result = (await api.postApiStudioEpisodesEpisodeIdRegenerateWithSettings(currentRegenEpisodeId, settings)).data;
+            const result = await api.postApiStudioEpisodesEpisodeIdRegenerateWithSettings(currentRegenEpisodeId, settings);
 
             regenModal.classList.add('hidden');
 

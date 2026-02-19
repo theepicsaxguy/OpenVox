@@ -16,6 +16,15 @@ from app.studio.git_ingestion import ingest_git_repository
 from app.studio.ingestion import ingest_file, ingest_paste, ingest_url
 from app.studio.normalizer import create_cleaning_options_from_request, normalize_text
 from app.studio.repositories import EpisodeRepository, SettingsRepository, SourceRepository
+from app.studio.schemas import (
+    CreateSourceFileBody,
+    CreateSourceJsonBody,
+    MoveToFolderBody,
+    ReCleanSourceBody,
+    SourceCoverUploadBody,
+    UpdateSourceBody,
+    request_body,
+)
 
 logger = get_logger('studio.routes.sources')
 
@@ -24,6 +33,8 @@ def register_routes(bp) -> None:
     """Register source routes on the blueprint."""
 
     @bp.route('/sources', methods=['POST'])
+    @request_body(CreateSourceFileBody, 'multipart/form-data')
+    @request_body(CreateSourceJsonBody)
     def create_source() -> Response | tuple[Response, int]:
         """Upload file, submit URL, paste text, or import git repository."""
 
@@ -131,6 +142,7 @@ def register_routes(bp) -> None:
         return jsonify({'cover_art': cover_art})
 
     @bp.route('/sources/<source_id>/cover', methods=['POST'])
+    @request_body(SourceCoverUploadBody, 'multipart/form-data')
     def upload_source_cover(source_id: str) -> Response | tuple[Response, int]:
         """Upload cover art for a source."""
         if 'cover' not in request.files:
@@ -158,6 +170,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True, 'cover_url': f'/api/studio/sources/{source_id}/cover'})
 
     @bp.route('/sources/<source_id>', methods=['PUT'])
+    @request_body(UpdateSourceBody)
     def update_source(source_id: str) -> Response | tuple[Response, int]:
         """Update source title or cleaned_text."""
         db = get_db()
@@ -190,6 +203,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True})
 
     @bp.route('/sources/<source_id>/re-clean', methods=['POST'])
+    @request_body(ReCleanSourceBody)
     def re_clean_source(source_id: str) -> Response | tuple[Response, int]:
         """Re-run normalizer on a source with different options."""
         db = get_db()
@@ -206,6 +220,7 @@ def register_routes(bp) -> None:
         return jsonify({'cleaned_text': cleaned})
 
     @bp.route('/sources/<source_id>/move', methods=['PUT'])
+    @request_body(MoveToFolderBody)
     def move_source(source_id: str) -> Response:
         """Move a source to a folder."""
         data = request.json

@@ -254,7 +254,7 @@ function _toggleItemSelection(type, id) {
 
 export async function refreshTree() {
     try {
-        const tree = (await api.getApiStudioLibraryTree()).data;
+        const tree = await api.getApiStudioLibraryTree();
         state.set('libraryTree', tree);
         render(tree);
     } catch (e) {
@@ -751,7 +751,7 @@ function getSelectedEpisodeIds() {
 
 async function playFolderPlaylist(folderId) {
     try {
-        const result = (await api.postApiStudioFoldersFolderIdPlaylist(folderId)).data;
+        const result = await api.postApiStudioFoldersFolderIdPlaylist(folderId);
 
         if (result.episodes && result.episodes.length > 0) {
             // Load first episode

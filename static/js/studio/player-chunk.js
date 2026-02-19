@@ -10,7 +10,7 @@ import { triggerHaptic } from './utils.js';
 
 export async function loadEpisode(episodeId, startChunk = null) {
     try {
-        const episode = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
+        const episode = await api.getApiStudioEpisodesEpisodeId(episodeId);
         playerState.setCurrentEpisode(episode);
 
         const chunks = (episode.chunks || []).filter(c => c.status === 'ready');

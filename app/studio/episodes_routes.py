@@ -21,6 +21,15 @@ from app.studio.repositories import (
     EpisodeRepository,
     SourceRepository,
 )
+from app.studio.schemas import (
+    BulkDeleteEpisodesBody,
+    BulkMoveEpisodesBody,
+    CreateEpisodeBody,
+    MoveToFolderBody,
+    RegenerateWithSettingsBody,
+    UpdateEpisodeBody,
+    request_body,
+)
 
 logger = get_logger('studio.routes.episodes')
 
@@ -29,6 +38,7 @@ def register_routes(bp) -> None:
     """Register episode routes on the blueprint."""
 
     @bp.route('/episodes', methods=['POST'])
+    @request_body(CreateEpisodeBody)
     def create_episode() -> Response | tuple[Response, int]:
         """Create an episode — chunk text and enqueue generation."""
         data = request.json
@@ -146,6 +156,7 @@ def register_routes(bp) -> None:
         return jsonify(result)
 
     @bp.route('/episodes/<episode_id>', methods=['PUT'])
+    @request_body(UpdateEpisodeBody)
     def update_episode(episode_id: str) -> Response | tuple[Response, int]:
         """Update episode metadata."""
         db = get_db()
@@ -203,6 +214,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True, 'status': 'pending'})
 
     @bp.route('/episodes/<episode_id>/regenerate-with-settings', methods=['POST'])
+    @request_body(RegenerateWithSettingsBody)
     def regenerate_with_settings(episode_id: str) -> Response | tuple[Response, int]:
         """Re-generate episode with new settings, with undo support."""
         db = get_db()
@@ -303,6 +315,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True})
 
     @bp.route('/episodes/bulk-move', methods=['POST'])
+    @request_body(BulkMoveEpisodesBody)
     def bulk_move_episodes() -> Response | tuple[Response, int]:
         """Move multiple episodes to a folder."""
         data = request.json or {}
@@ -320,6 +333,7 @@ def register_routes(bp) -> None:
         return jsonify({'ok': True, 'moved': len(episode_ids)})
 
     @bp.route('/episodes/bulk-delete', methods=['POST'])
+    @request_body(BulkDeleteEpisodesBody)
     def bulk_delete_episodes() -> Response | tuple[Response, int]:
         """Delete multiple episodes."""
         data = request.json or {}
@@ -476,6 +490,7 @@ def register_routes(bp) -> None:
         return send_file(merged_path)
 
     @bp.route('/episodes/<episode_id>/move', methods=['PUT'])
+    @request_body(MoveToFolderBody)
     def move_episode(episode_id: str) -> Response:
         """Move an episode to a folder."""
         data = request.json

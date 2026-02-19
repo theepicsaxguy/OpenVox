@@ -30,7 +30,7 @@ function setIsFullscreen(value) {
 
 export async function loadEpisode(episodeId, startChunk = null) {
     try {
-        const episode = (await api.getApiStudioEpisodesEpisodeId(episodeId)).data;
+        const episode = await api.getApiStudioEpisodesEpisodeId(episodeId);
         currentEpisode = episode;
         chunks = (episode.chunks || []).filter(c => c.status === 'ready');
 

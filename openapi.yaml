@@ -41,6 +41,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpeechGenerationBody'
   /api/studio/sources:
     post:
       summary: Upload file, submit URL, paste text, or import git
@@ -48,6 +53,14 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSourceJsonBody'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateSourceFileBody'
     get:
       summary: List all sources.
       description: List all sources.
@@ -79,6 +92,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSourceBody'
     delete:
       summary: Delete source and associated episodes/audio.
       description: Delete source and associated episodes/audio.
@@ -116,6 +134,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SourceCoverUploadBody'
   /api/studio/sources/{source_id}/re-clean:
     post:
       summary: Re-run normalizer on a source with different optio
@@ -129,6 +152,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReCleanSourceBody'
   /api/studio/sources/{source_id}/move:
     put:
       summary: Move a source to a folder.
@@ -142,6 +170,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveToFolderBody'
   /api/studio/episodes:
     post:
       summary: "Create an episode \u2014 chunk text and enqueue generat"
@@ -149,6 +182,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEpisodeBody'
     get:
       summary: List all episodes.
       description: List all episodes.
@@ -180,6 +218,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEpisodeBody'
     delete:
       summary: Delete episode and audio files.
       description: Delete episode and audio files.
@@ -218,6 +261,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegenerateWithSettingsBody'
   /api/studio/undo/{undo_id}:
     post:
       summary: Undo an episode regeneration within the grace peri
@@ -238,6 +286,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkMoveEpisodesBody'
   /api/studio/episodes/bulk-delete:
     post:
       summary: Delete multiple episodes.
@@ -245,6 +298,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkDeleteEpisodesBody'
   /api/studio/episodes/{episode_id}/chunks/{chunk_index}/regenerate:
     post:
       summary: Regenerate a single chunk.
@@ -262,7 +320,7 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          type: integer
   /api/studio/episodes/{episode_id}/cancel:
     post:
       summary: Cancel a generating episode and reset error chunks
@@ -306,7 +364,7 @@ paths:
         in: path
         required: true
         schema:
-          type: string
+          type: integer
   /api/studio/episodes/{episode_id}/audio/full:
     get:
       summary: Serve merged full episode audio.
@@ -333,6 +391,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveToFolderBody'
   /api/studio/folders:
     post:
       summary: Create a new folder.
@@ -340,6 +403,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderBody'
   /api/studio/folders/{folder_id}:
     put:
       summary: Rename or move a folder.
@@ -353,6 +421,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFolderBody'
     delete:
       summary: Delete a folder and all its contents (episodes aud
       description: Delete a folder and all its contents (episodes audio files are
@@ -399,6 +472,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderBody'
   /api/studio/tags:
     get:
       summary: List all tags.
@@ -412,6 +490,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTagBody'
   /api/studio/tags/{tag_id}:
     delete:
       summary: Delete a tag.
@@ -438,6 +521,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTagsBody'
   /api/studio/episodes/{episode_id}/tags:
     post:
       summary: Set tags for an episode (replaces all existing).
@@ -451,6 +539,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetTagsBody'
   /api/studio/playback/{episode_id}:
     get:
       summary: Get playback state for an episode.
@@ -476,6 +569,11 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePlaybackBody'
   /api/studio/settings:
     get:
       summary: Get all settings.
@@ -489,6 +587,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsBody'
   /api/studio/generation/status:
     get:
       summary: Get generation queue status.
@@ -510,6 +613,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewCleanBody'
   /api/studio/preview-content:
     post:
       summary: Preview content without importing - for URL and gi
@@ -517,6 +625,11 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewContentBody'
   /api/studio/preview-chunks:
     post:
       summary: Preview chunking without creating an episode.
@@ -524,7 +637,330 @@ paths:
       responses:
         '200':
           description: Success
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewChunksBody'
 info:
   title: OpenVox API
   version: 1.0.0
 openapi: 3.0.3
+components:
+  schemas:
+    SpeechGenerationBody:
+      type: object
+      properties:
+        input:
+          type: string
+          description: Text to synthesize
+        voice:
+          type: string
+          description: Voice ID or path
+        model:
+          type: string
+          description: Model name (ignored, for OpenAI compatibility)
+        response_format:
+          type: string
+          description: 'Audio format: mp3, wav, pcm, opus'
+        stream:
+          type: boolean
+          description: Enable streaming response
+      required:
+      - input
+      additionalProperties: false
+    CleaningSettings:
+      type: object
+      properties:
+        code_block_rule:
+          type: string
+          description: 'How to handle code blocks: skip, read, summarize'
+        remove_non_text:
+          type: boolean
+        handle_tables:
+          type: boolean
+        speak_urls:
+          type: boolean
+        expand_abbreviations:
+          type: boolean
+        preserve_parentheses:
+          type: boolean
+        preserve_structure:
+          type: boolean
+        paragraph_spacing:
+          type: integer
+        section_spacing:
+          type: integer
+        list_item_spacing:
+          type: integer
+      additionalProperties: false
+    UrlSettings:
+      type: object
+      properties:
+        use_jina:
+          type: boolean
+          description: Use Jina Reader for URL extraction
+        jina_fallback:
+          type: boolean
+          description: Fall back to Jina if other methods fail
+      additionalProperties: false
+    CreateSourceJsonBody:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Raw text to import
+        title:
+          type: string
+          description: Source title
+        url:
+          type: string
+          description: URL to import content from
+        git_url:
+          type: string
+          description: Git repository URL to import
+        git_subpath:
+          type: string
+          description: Subdirectory path within the git repo
+        cleaning_settings:
+          description: Override cleaning options
+          allOf:
+          - $ref: '#/components/schemas/CleaningSettings'
+        url_settings:
+          description: URL extraction settings
+          allOf:
+          - $ref: '#/components/schemas/UrlSettings'
+      additionalProperties: false
+    CreateSourceFileBody:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: File to upload (.md, .txt)
+      additionalProperties: false
+    SourceCoverUploadBody:
+      type: object
+      properties:
+        cover:
+          type: string
+          format: binary
+          description: Cover art image file
+      additionalProperties: false
+    UpdateSourceBody:
+      type: object
+      properties:
+        title:
+          type: string
+        cleaned_text:
+          type: string
+      additionalProperties: false
+    ReCleanSourceBody:
+      type: object
+      properties:
+        code_block_rule:
+          type: string
+        remove_non_text:
+          type: boolean
+        handle_tables:
+          type: boolean
+        speak_urls:
+          type: boolean
+        expand_abbreviations:
+          type: boolean
+        preserve_parentheses:
+          type: boolean
+      additionalProperties: false
+    MoveToFolderBody:
+      type: object
+      properties:
+        folder_id:
+          type: string
+          description: Target folder ID, or null for root
+          nullable: true
+      additionalProperties: false
+    CreateEpisodeBody:
+      type: object
+      properties:
+        source_id:
+          type: string
+        voice_id:
+          type: string
+        output_format:
+          type: string
+        chunk_strategy:
+          type: string
+          description: paragraph, sentence, heading, or fixed
+        chunk_max_length:
+          type: integer
+        code_block_rule:
+          type: string
+        breathing_intensity:
+          type: string
+          description: none, light, normal, heavy
+        title:
+          type: string
+      required:
+      - source_id
+      additionalProperties: false
+    UpdateEpisodeBody:
+      type: object
+      properties:
+        title:
+          type: string
+      additionalProperties: false
+    RegenerateWithSettingsBody:
+      type: object
+      properties:
+        voice_id:
+          type: string
+        output_format:
+          type: string
+        chunk_strategy:
+          type: string
+        chunk_max_length:
+          type: integer
+        code_block_rule:
+          type: string
+        breathing_intensity:
+          type: string
+      additionalProperties: false
+    BulkMoveEpisodesBody:
+      type: object
+      properties:
+        episode_ids:
+          type: array
+          items:
+            type: string
+        folder_id:
+          type: string
+          nullable: true
+      required:
+      - episode_ids
+      additionalProperties: false
+    BulkDeleteEpisodesBody:
+      type: object
+      properties:
+        episode_ids:
+          type: array
+          items:
+            type: string
+      required:
+      - episode_ids
+      additionalProperties: false
+    CreateFolderBody:
+      type: object
+      properties:
+        name:
+          type: string
+          default: New Folder
+        parent_id:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+          default: 0
+      additionalProperties: false
+    UpdateFolderBody:
+      type: object
+      properties:
+        name:
+          type: string
+        parent_id:
+          type: string
+          nullable: true
+        sort_order:
+          type: integer
+      additionalProperties: false
+    ReorderItem:
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+        sort_order:
+          type: integer
+      required:
+      - id
+      - sort_order
+      additionalProperties: false
+    ReorderBody:
+      type: object
+      properties:
+        items:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/ReorderItem'
+      additionalProperties: false
+    CreateTagBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+      - name
+      additionalProperties: false
+    SetTagsBody:
+      type: object
+      properties:
+        tag_ids:
+          type: array
+          default: []
+          description: Tag IDs to assign (replaces existing)
+          items:
+            type: string
+      additionalProperties: false
+    SavePlaybackBody:
+      type: object
+      properties:
+        current_chunk_index:
+          type: integer
+          default: 0
+        position_secs:
+          type: number
+          default: 0.0
+        percent_listened:
+          type: number
+          default: 0.0
+      additionalProperties: false
+    UpdateSettingsBody:
+      type: object
+      properties: {}
+      additionalProperties: false
+    PreviewCleanBody:
+      type: object
+      properties:
+        text:
+          type: string
+        code_block_rule:
+          type: string
+      required:
+      - text
+      additionalProperties: false
+    PreviewContentBody:
+      type: object
+      properties:
+        type:
+          type: string
+          description: 'Content type: url or git'
+        url:
+          type: string
+        subpath:
+          type: string
+      required:
+      - type
+      additionalProperties: false
+    PreviewChunksBody:
+      type: object
+      properties:
+        text:
+          type: string
+        strategy:
+          type: string
+        max_chars:
+          type: integer
+      required:
+      - text
+      additionalProperties: false

@@ -10,10 +10,13 @@ on:
     paths:
       - '**.py'
       - '**.js'
+      - '**.ts'
       - 'templates/**'
       - 'static/**'
       - 'pyproject.toml'
       - 'requirements.txt'
+      - 'openapi.yaml'
+      - 'orval.config.mjs'
       - '.github/workflows/ci.yml'
       - 'Dockerfile'
       - 'docker-entrypoint.sh'
@@ -23,10 +26,13 @@ on:
     paths:
       - '**.py'
       - '**.js'
+      - '**.ts'
       - 'templates/**'
       - 'static/**'
       - 'pyproject.toml'
       - 'requirements.txt'
+      - 'openapi.yaml'
+      - 'orval.config.mjs'
       - '.github/workflows/ci.yml'
       - 'Dockerfile'
       - 'docker-entrypoint.sh'
@@ -80,10 +86,57 @@ jobs:
       - name: Run ESLint
         run: npx eslint .
 
+  # Step 1b: Validate generated API client is up to date
+  api-client:
+    name: API Client Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install Python dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --quiet flask apispec marshmallow pyyaml trafilatura markdown-it-py waitress
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Regenerate API client
+        run: pnpm run client:generate
+
+      - name: Check generated files are up to date
+        run: |
+          if ! git diff --exit-code openapi.yaml static/js/studio/client.ts; then
+            echo ""
+            echo "::error::Generated API client is out of date!"
+            echo "Run 'pnpm run client:generate' locally and commit the changes."
+            exit 1
+          fi
+          echo "Generated API client is up to date."
+
+      - name: Validate OpenAPI spec
+        run: pnpm run openapi:validate
+
   # Step 2: Build Docker image (only if lint passes)
   docker:
     name: Build Docker Image
-    needs: [lint, lint-js]
+    needs: [lint, lint-js, api-client]
     uses: ./.github/workflows/docker.yml
     secrets: inherit
 

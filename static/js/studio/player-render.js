@@ -523,7 +523,7 @@ async function showEpisodeListSheet() {
     overlay.classList.remove('hidden');
 
     try {
-        const library = (await api.getApiStudioLibraryTree()).data;
+        const library = await api.getApiStudioLibraryTree();
         const episodes = library.episodes || [];
         const currentEpisode = playerState.getCurrentEpisode();
 

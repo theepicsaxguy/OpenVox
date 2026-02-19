@@ -113,7 +113,7 @@ async function saveSettings() {
 
 async function loadTags() {
     try {
-        const tags = (await api.getApiStudioTags()).data;
+        const tags = await api.getApiStudioTags();
         state.set('tags', tags);
         renderTags(tags);
     } catch (e) {
@@ -154,7 +154,7 @@ let _statusInterval = null;
 function startStatusPolling() {
     _statusInterval = setInterval(async () => {
         try {
-            const status = (await api.getApiStudioGenerationStatus()).data;
+            const status = await api.getApiStudioGenerationStatus();
             updateGenerationStatusUI(status);
         } catch {}
     }, 5000);
