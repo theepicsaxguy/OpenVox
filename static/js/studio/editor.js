@@ -311,15 +311,8 @@ async function loadReview(sourceId) {
             const file = coverInput.files[0];
             if (!file) return;
 
-            const formData = new FormData();
-            formData.append('cover', file);
-
             try {
-                const res = await fetch(`/api/studio/sources/${sourceId}/cover`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if (!res.ok) throw new Error('Upload failed');
+                await api.postApiStudioSourcesSourceIdCover(sourceId, { cover: file });
 
                 coverImage.src = `/api/studio/sources/${sourceId}/cover?t=${Date.now()}`;
                 coverImage.onload = () => {

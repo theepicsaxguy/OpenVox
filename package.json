@@ -9,6 +9,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "openapi:generate": ".venv/bin/python scripts/generate_openapi.py",
+    "openapi:validate": ".venv/bin/python scripts/validate_openapi.py",
     "client:generate": "pnpm openapi:generate && orval"
   },
   "devDependencies": {
