@@ -258,15 +258,18 @@ function updateMuteUI() {
 }
 
 export function updatePlayPauseIcon(playing) {
-    $('play-icon').style.display = playing ? 'none' : 'block';
-    $('pause-icon').style.display = playing ? 'block' : 'none';
+    const playIcon = $('play-icon');
+    const pauseIcon = $('pause-icon');
+    if (playIcon) playIcon.style.display = playing ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = playing ? 'block' : 'none';
 
-    const btn = $('player-play');
-    if (playing) {
-        btn.classList.add('playing');
-    } else {
-        btn.classList.remove('playing');
-    }
+    const fsPlayIcon = $('fs-play-icon');
+    const fsPauseIcon = $('fs-pause-icon');
+    if (fsPlayIcon) fsPlayIcon.style.display = playing ? 'none' : 'block';
+    if (fsPauseIcon) fsPauseIcon.style.display = playing ? 'block' : 'none';
+
+    const indicator = $('fs-playing-indicator');
+    if (indicator) indicator.classList.toggle('active', playing);
 }
 
 function savePosition(forcePct) {

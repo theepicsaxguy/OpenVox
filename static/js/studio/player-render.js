@@ -7,38 +7,37 @@ import { toast } from './main.js';
 import { $, formatTime, triggerHaptic } from './utils.js';
 import * as playerState from './player-state.js';
 
+const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+
 export function initFullscreenPlayer() {
     const fullscreenPlayer = $('fullscreen-player');
-    const miniPlayerExpand = $('btn-expand-player');
-
     if (!fullscreenPlayer) return;
-
-    if (miniPlayerExpand) {
-        miniPlayerExpand.addEventListener('click', openFullscreenPlayer);
-    }
 
     $('fs-btn-minimize').addEventListener('click', closeFullscreenPlayer);
 
-    const { togglePlay } = window.playerControls || {};
-    if (togglePlay) {
-        $('fs-btn-play').addEventListener('click', togglePlay);
-    }
-
-    $('fs-scrubber').addEventListener('input', handleFullscreenSeek);
-
-    $('fs-btn-shuffle').addEventListener('click', () => {
-        toast('Shuffle: Coming soon', 'info');
+    $('fs-btn-play')?.addEventListener('click', () => {
+        const { togglePlay } = window.playerControls || {};
+        if (togglePlay) togglePlay();
     });
 
-    $('fs-btn-repeat').addEventListener('click', () => {
-        toast('Repeat: Coming soon', 'info');
-    });
+    $('fs-scrubber')?.addEventListener('input', handleFullscreenSeek);
 
-    initFullscreenSpeedControl();
+    initSpeedPill();
     initFullscreenVolume();
     initFullscreenButtons();
+    initMiniPlayerTap();
 
     document.addEventListener('keydown', handleFullscreenKeydown);
+}
+
+function initMiniPlayerTap() {
+    const tapTarget = $('mini-player-tap-target');
+    if (!tapTarget) return;
+
+    tapTarget.addEventListener('click', (e) => {
+        if (e.target.closest('.mini-ctrl-btn')) return;
+        openFullscreenPlayer();
+    });
 }
 
 function handleFullscreenSeek(e) {
@@ -81,51 +80,61 @@ function handleFullscreenSeek(e) {
     $('fs-progress-fill').style.width = `${pct}%`;
 }
 
-function initFullscreenSpeedControl() {
-    const fsSpeedSelect = document.getElementById('fs-playback-speed');
-    if (!fsSpeedSelect) return;
+function initSpeedPill() {
+    const pill = $('fs-speed-pill');
+    if (!pill) return;
 
-    const savedSpeed = localStorage.getItem('pocket_tts_playback_speed');
-    if (savedSpeed) {
-        fsSpeedSelect.value = savedSpeed;
-        const audio = playerState.getAudio();
-        if (audio) {
-            audio.playbackRate = parseFloat(savedSpeed);
-        }
+    const saved = localStorage.getItem('pocket_tts_playback_speed');
+    if (saved) {
+        updateSpeedPillUI(parseFloat(saved));
     }
 
-    fsSpeedSelect.addEventListener('change', (e) => {
-        const speed = parseFloat(e.target.value);
+    pill.addEventListener('click', () => {
         const audio = playerState.getAudio();
-        if (audio) {
-            audio.playbackRate = speed;
-        }
-        localStorage.setItem('pocket_tts_playback_speed', speed);
+        const current = audio ? audio.playbackRate : 1;
+        const idx = SPEED_STEPS.indexOf(current);
+        const next = idx >= 0 && idx < SPEED_STEPS.length - 1
+            ? SPEED_STEPS[idx + 1]
+            : SPEED_STEPS[0];
 
-        const miniSpeedSelect = document.getElementById('playback-speed');
-        if (miniSpeedSelect) {
-            miniSpeedSelect.value = savedSpeed;
-        }
+        if (audio) audio.playbackRate = next;
+        localStorage.setItem('pocket_tts_playback_speed', next);
+
+        updateSpeedPillUI(next);
+
+        const miniSpeed = $('playback-speed');
+        if (miniSpeed) miniSpeed.value = next.toString();
+
+        triggerHaptic('light');
     });
 }
 
-function initFullscreenVolume() {
-    const fsVolumeSlider = document.getElementById('fs-volume-slider');
-    const fsMuteBtn = document.getElementById('fs-btn-mute');
-    const audio = playerState.getAudio();
+function updateSpeedPillUI(speed) {
+    const pill = $('fs-speed-pill');
+    const label = $('fs-speed-label');
+    if (!pill || !label) return;
 
-    if (fsVolumeSlider && audio) {
-        fsVolumeSlider.value = audio.volume;
+    const display = speed % 1 === 0 ? `${speed}x` : `${speed}x`;
+    label.textContent = display;
+
+    pill.classList.toggle('speed-modified', speed !== 1);
+}
+
+function initFullscreenVolume() {
+    const fsVolumeSlider = $('fs-volume-slider');
+    const fsMuteBtn = $('fs-btn-mute');
+
+    if (fsVolumeSlider) {
         fsVolumeSlider.addEventListener('input', (e) => {
             const vol = parseFloat(e.target.value);
+            const audio = playerState.getAudio();
             if (audio) audio.volume = vol;
             localStorage.setItem('pocket_tts_volume', vol);
             const { updateMuteButton } = window.playerControls || {};
-            if (updateMuteButton) {
-                updateMuteButton(vol > 0, fsMuteBtn);
-            }
+            if (updateMuteButton) updateMuteButton(vol > 0, fsMuteBtn);
         });
     }
+
     if (fsMuteBtn) {
         fsMuteBtn.addEventListener('click', () => {
             const { toggleMute } = window.playerControls || {};
@@ -135,38 +144,52 @@ function initFullscreenVolume() {
 }
 
 function initFullscreenButtons() {
-    $('fs-btn-more').addEventListener('click', () => {
+    $('fs-btn-more')?.addEventListener('click', () => {
         const episode = playerState.getCurrentEpisode();
         showEpisodeMenu(episode?.id);
     });
 
-    $('fs-btn-skip-back').addEventListener('click', () => {
+    $('fs-btn-skip-back')?.addEventListener('click', () => {
         const { skip } = window.playerControls || {};
         if (skip) skip(-10);
     });
 
-    $('fs-btn-skip-forward').addEventListener('click', () => {
+    $('fs-btn-skip-forward')?.addEventListener('click', () => {
         const { skip } = window.playerControls || {};
         if (skip) skip(10);
     });
 
-    $('fs-btn-sleep').addEventListener('click', () => {
+    $('fs-btn-prev')?.addEventListener('click', () => {
+        const { prevChunk } = window.playerControls || {};
+        if (prevChunk) prevChunk();
+    });
+
+    $('fs-btn-next')?.addEventListener('click', () => {
+        const { nextChunk } = window.playerControls || {};
+        if (nextChunk) nextChunk();
+    });
+
+    $('fs-btn-sleep')?.addEventListener('click', () => {
         showSleepTimerMenu();
     });
 
-    const playlistBtn = document.getElementById('fs-btn-playlist');
-    if (playlistBtn) {
-        playlistBtn.addEventListener('click', () => {
-            showEpisodeListSheet();
-        });
-    }
+    $('fs-btn-playlist')?.addEventListener('click', () => {
+        showEpisodeListSheet();
+    });
+
+    $('fs-btn-download')?.addEventListener('click', () => {
+        const episode = playerState.getCurrentEpisode();
+        if (episode) {
+            window.open(api.fullEpisodeAudioUrl(episode.id), '_blank');
+        }
+    });
 }
 
 function handleFullscreenKeydown(e) {
     const isFullscreen = playerState.getIsFullscreen ? playerState.getIsFullscreen() : false;
     if (!isFullscreen) return;
 
-    const { togglePlay, skip } = window.playerControls || {};
+    const { togglePlay, skip, prevChunk, nextChunk } = window.playerControls || {};
 
     switch (e.key) {
     case 'Escape':
@@ -182,6 +205,14 @@ function handleFullscreenKeydown(e) {
     case 'ArrowRight':
         if (skip) skip(10);
         break;
+    case 'n':
+    case 'N':
+        if (nextChunk) nextChunk();
+        break;
+    case 'p':
+    case 'P':
+        if (prevChunk) prevChunk();
+        break;
     }
 }
 
@@ -193,6 +224,13 @@ export function openFullscreenPlayer() {
     $('fullscreen-player').classList.remove('hidden');
     updateFullscreenUI();
     document.body.classList.add('fullscreen-player-open');
+
+    const saved = localStorage.getItem('pocket_tts_playback_speed');
+    if (saved) updateSpeedPillUI(parseFloat(saved));
+
+    const audio = playerState.getAudio();
+    const volumeSlider = $('fs-volume-slider');
+    if (audio && volumeSlider) volumeSlider.value = audio.volume;
 }
 
 export function closeFullscreenPlayer() {
@@ -208,69 +246,97 @@ export function updateFullscreenUI() {
     const chunks = playerState.getChunks();
     const currentChunkIndex = playerState.getCurrentChunkIndex();
     const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
-    const _idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
 
-    $('fs-track-title').textContent = episode.title;
-    const episodeInfoEl = document.getElementById('fs-episode-info');
+    const titleEl = $('fs-track-title');
+    if (titleEl) titleEl.textContent = episode.title;
+
+    const episodeInfoEl = $('fs-episode-info');
     const totalDuration = playerState.getTotalDuration();
     if (episodeInfoEl) {
+        const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
         episodeInfoEl.textContent = totalDuration > 0
-            ? formatTime(totalDuration)
+            ? `Part ${idx + 1} of ${chunks.length} · ${formatTime(totalDuration)}`
             : '';
     }
 
     const audio = playerState.getAudio();
     const isPlaying = audio && !audio.paused;
-    $('fs-play-icon').style.display = isPlaying ? 'none' : 'block';
-    $('fs-pause-icon').style.display = isPlaying ? 'block' : 'none';
+    const playIcon = $('fs-play-icon');
+    const pauseIcon = $('fs-pause-icon');
+    if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
 
     const indicator = $('fs-playing-indicator');
-    if (indicator) {
-        indicator.classList.toggle('active', isPlaying);
+    if (indicator) indicator.classList.toggle('active', isPlaying);
+
+    updateSubtitleDisplay(chunk);
+
+    const currentTime = playerState.getCurrentTime();
+    if (totalDuration > 0) {
+        const tCurr = $('fs-time-current');
+        const tRem = $('fs-time-remaining');
+        if (tCurr) tCurr.textContent = formatTime(currentTime);
+        const remaining = totalDuration - currentTime;
+        if (tRem) tRem.textContent = `-${formatTime(remaining)}`;
+        const pct = (currentTime / totalDuration) * 100;
+        const scrub = $('fs-scrubber');
+        if (scrub) scrub.value = pct;
+        const fill = $('fs-progress-fill');
+        if (fill) fill.style.width = `${pct}%`;
     }
+}
 
-    updateSubtitles(chunk ? chunk.text : '');
-
+function updateSubtitleDisplay(chunk) {
     if (chunk && chunk.text) {
         playerState.setCurrentSubtitleText(chunk.text);
         const sentences = chunk.text.split(/(?<=[.!?])\s+/);
         playerState.setSubtitleSentences(sentences);
-        const timings = sentences.map(sentence => {
-            const wordCount = sentence.split(/\s+/).length;
+        const timings = sentences.map(s => {
+            const wordCount = s.split(/\s+/).length;
             return wordCount / 2.5;
         });
         playerState.setSubtitleTimings(timings);
+        renderSubtitles(sentences, 0);
     } else {
         playerState.setCurrentSubtitleText('');
         playerState.setSubtitleSentences([]);
         playerState.setSubtitleTimings([]);
+        const el = $('fs-subtitle-text');
+        if (el) el.innerHTML = '<span class="subtitle-sentence active">Waiting for audio...</span>';
     }
+}
 
-    const currentTime = playerState.getCurrentTime();
-    if (totalDuration > 0) {
-        $('fs-time-current').textContent = formatTime(currentTime);
-        const remaining = totalDuration - currentTime;
-        const fsTimeRemaining = document.getElementById('fs-time-remaining');
-        if (fsTimeRemaining) {
-            fsTimeRemaining.textContent = `-${formatTime(remaining)}`;
-        }
-        const pct = (currentTime / totalDuration) * 100;
-        $('fs-scrubber').value = pct;
-        $('fs-progress-fill').style.width = `${pct}%`;
+function renderSubtitles(sentences, activeIndex) {
+    const el = $('fs-subtitle-text');
+    if (!el || !sentences.length) return;
+
+    const start = Math.max(0, activeIndex - 1);
+    const end = Math.min(sentences.length, activeIndex + 2);
+
+    let html = '';
+    for (let i = start; i < end; i++) {
+        const cls = i === activeIndex ? 'active' : (i < activeIndex ? 'prev' : '');
+        const text = escapeForSubtitle(sentences[i]);
+        html += `<span class="subtitle-sentence ${cls}">${text}</span>`;
     }
+    el.innerHTML = html;
+}
+
+function escapeForSubtitle(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 export function updateSubtitles(text) {
     const subtitleEl = $('fs-subtitle-text');
     if (!subtitleEl) return;
-
     if (!text) {
-        subtitleEl.textContent = 'No subtitle available';
+        subtitleEl.innerHTML = '<span class="subtitle-sentence active">No subtitle available</span>';
         return;
     }
-
     const sentences = text.split(/(?<=[.!?])\s+/);
-    subtitleEl.textContent = sentences[0] || text;
+    renderSubtitles(sentences, 0);
 }
 
 export function updateSubtitlesSync() {
@@ -294,10 +360,7 @@ export function updateSubtitlesSync() {
         currentSentenceIndex = i;
     }
 
-    const subtitleEl = $('fs-subtitle-text');
-    if (subtitleEl && subtitleSentences[currentSentenceIndex]) {
-        subtitleEl.textContent = subtitleSentences[currentSentenceIndex];
-    }
+    renderSubtitles(subtitleSentences, currentSentenceIndex);
 }
 
 export function updateCoverArt() {
@@ -324,8 +387,11 @@ export function updateCoverArt() {
 
 export function showPlayer() {
     const playerBar = $('player-bar');
+    if (!playerBar) return;
+    playerBar.classList.remove('hidden');
     playerBar.style.display = 'block';
-    playerBar.style.animation = 'slideUp 0.4s ease';
+
+    document.querySelector('.app-shell')?.classList.add('has-player');
 
     const { drawWaveform, startWaveformAnimation } = window.playerWaveform || {};
     setTimeout(() => {
@@ -340,8 +406,19 @@ export function updatePlayerUI() {
     const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
 
-    $('player-chunk-label').textContent = chunk ? chunk.text.substring(0, 60) + '...' : '';
-    $('player-chunk-num').textContent = `${idx + 1} / ${chunks.length}`;
+    const titleEl = $('player-title');
+    const episode = playerState.getCurrentEpisode();
+    if (titleEl && episode) titleEl.textContent = episode.title;
+
+    const chunkLabel = $('player-chunk-label');
+    if (chunkLabel) {
+        chunkLabel.textContent = chunk
+            ? `Part ${idx + 1}/${chunks.length} · ${chunk.text.substring(0, 50)}...`
+            : '';
+    }
+
+    const numEl = $('player-chunk-num');
+    if (numEl) numEl.textContent = `${idx + 1} / ${chunks.length}`;
 
     const { updatePlayPauseIcon } = window.playerControls || {};
     const audio = playerState.getAudio();
@@ -366,25 +443,20 @@ export function updateMediaSession() {
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
 
     navigator.mediaSession.metadata = new MediaMetadata({
-        title: episode?.title || 'Podcast',
+        title: episode?.title || 'OpenVox',
         artist: chunk ? chunk.text.substring(0, 100) : 'OpenVox',
         album: `Part ${idx + 1} of ${chunks.length}`,
-        artwork: [
-            {
-                src: '/static/img/podcast-placeholder.svg',
-                sizes: '512x512',
-                type: 'image/svg+xml'
-            }
-        ]
     });
 
     const audio = playerState.getAudio();
     if (audio && audio.duration) {
-        navigator.mediaSession.setPositionState({
-            duration: audio.duration,
-            playbackRate: audio.playbackRate,
-            position: audio.currentTime
-        });
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: audio.duration,
+                playbackRate: audio.playbackRate,
+                position: audio.currentTime,
+            });
+        } catch (_) {}
     }
 }
 
@@ -395,21 +467,16 @@ export function updateNowPlayingView() {
 
     const currentChunkIndex = playerState.getCurrentChunkIndex();
     const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
-    const _idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
+    const indicator = document.getElementById('playing-indicator');
+    const audio = playerState.getAudio();
 
     const titleEl = document.getElementById('now-playing-title');
     const chunkEl = document.getElementById('now-playing-chunk');
-    const indicator = document.getElementById('playing-indicator');
-    const audio = playerState.getAudio();
 
     if (titleEl) titleEl.textContent = episode.title;
     if (chunkEl) chunkEl.textContent = chunk ? chunk.text.substring(0, 120) + '...' : '';
     if (indicator) {
-        if (audio && !audio.paused) {
-            indicator.classList.add('active');
-        } else {
-            indicator.classList.remove('active');
-        }
+        indicator.classList.toggle('active', !!(audio && !audio.paused));
     }
 
     const { renderQueue } = window.playerQueue || {};
@@ -421,21 +488,25 @@ export function updateTimeDisplays() {
     const chunks = playerState.getChunks();
     const currentChunkIndex = playerState.getCurrentChunkIndex();
     const totalDuration = playerState.getTotalDuration();
-    const _currentTime = playerState.getCurrentTime();
 
     if (!audio || !audio.duration) return;
 
-    const _currentChunkDuration = chunks.find(c => c.chunk_index === currentChunkIndex)?.duration_secs || 0;
     const chunkStartTime = playerState.calculateEpisodeTime(currentChunkIndex);
     playerState.setCurrentTime(chunkStartTime + audio.currentTime);
 
     const episodeProgress = playerState.calculateEpisodeProgress();
 
-    const chunkPct = (audio.currentTime / audio.duration) * 100;
-    $('player-scrubber').value = chunkPct;
-    document.getElementById('scrubber-fill').style.width = `${chunkPct}%`;
-    $('player-time-current').textContent = formatTime(audio.currentTime);
+    // Mini player progress
+    const scrubberFill = document.getElementById('scrubber-fill');
+    if (scrubberFill) scrubberFill.style.width = `${episodeProgress}%`;
 
+    const scrubber = $('player-scrubber');
+    if (scrubber) scrubber.value = episodeProgress;
+
+    const timeCurrent = $('player-time-current');
+    if (timeCurrent) timeCurrent.textContent = formatTime(audio.currentTime);
+
+    // Now Playing view
     const nowPlayingProgress = document.getElementById('now-playing-progress');
     const nowPlayingCurrent = document.getElementById('now-playing-current');
     const nowPlayingTotal = document.getElementById('now-playing-total');
@@ -444,10 +515,11 @@ export function updateTimeDisplays() {
     if (nowPlayingCurrent) nowPlayingCurrent.textContent = formatTime(playerState.getCurrentTime());
     if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(totalDuration);
 
-    const fsTimeCurrent = document.getElementById('fs-time-current');
-    const fsTimeRemaining = document.getElementById('fs-time-remaining');
-    const fsScrubber = document.getElementById('fs-scrubber');
-    const fsProgressFill = document.getElementById('fs-progress-fill');
+    // Fullscreen player
+    const fsTimeCurrent = $('fs-time-current');
+    const fsTimeRemaining = $('fs-time-remaining');
+    const fsScrubber = $('fs-scrubber');
+    const fsProgressFill = $('fs-progress-fill');
 
     if (fsTimeCurrent) fsTimeCurrent.textContent = formatTime(playerState.getCurrentTime());
     if (fsTimeRemaining) {
@@ -464,16 +536,19 @@ export function updateMetadataDisplay() {
     const audio = playerState.getAudio();
     const totalDuration = playerState.getTotalDuration();
 
-    $('player-time-total').textContent = formatTime(audio?.duration || 0);
-    $('player-scrubber').value = 0;
-    document.getElementById('scrubber-fill').style.width = '0%';
+    const timeTotal = $('player-time-total');
+    if (timeTotal) timeTotal.textContent = formatTime(audio?.duration || 0);
+
+    const scrubber = $('player-scrubber');
+    if (scrubber) scrubber.value = 0;
+
+    const fill = document.getElementById('scrubber-fill');
+    if (fill) fill.style.width = '0%';
 
     const nowPlayingTotal = document.getElementById('now-playing-total');
     if (nowPlayingTotal) nowPlayingTotal.textContent = formatTime(totalDuration);
 
-    const fsTimeTotal = document.getElementById('fs-time-total');
-    const fsTimeRemaining = document.getElementById('fs-time-remaining');
-    if (fsTimeTotal) fsTimeTotal.textContent = formatTime(totalDuration);
+    const fsTimeRemaining = $('fs-time-remaining');
     if (fsTimeRemaining) {
         const remaining = totalDuration - playerState.getCurrentTime();
         fsTimeRemaining.textContent = `-${formatTime(remaining)}`;
@@ -483,7 +558,7 @@ export function updateMetadataDisplay() {
 function showEpisodeMenu(episodeId) {
     if (!episodeId) return;
 
-    window.openBottomSheet('Episode Actions', [
+    window.openBottomSheet?.('Episode Actions', [
         {
             label: 'Go to Episode',
             icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
@@ -497,7 +572,7 @@ function showEpisodeMenu(episodeId) {
         },
         {
             label: 'Regenerate Audio',
-            icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
+            icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
             action: async () => {
                 try {
                     await api.postApiStudioEpisodesEpisodeIdRegenerate(episodeId);
@@ -511,16 +586,12 @@ function showEpisodeMenu(episodeId) {
 }
 
 async function showEpisodeListSheet() {
-    const sheet = document.getElementById('bottom-sheet');
-    const overlay = document.getElementById('bottom-sheet-overlay');
-    const title = document.getElementById('bottom-sheet-title');
     const content = document.getElementById('bottom-sheet-content');
+    if (!content) return;
 
-    if (!sheet || !overlay || !title || !content) return;
+    window.openBottomSheet?.('Episodes', []);
 
-    title.textContent = 'Episodes';
     content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Loading...</p>';
-    overlay.classList.remove('hidden');
 
     try {
         const library = await api.getApiStudioLibraryTree();
@@ -535,32 +606,21 @@ async function showEpisodeListSheet() {
             episodes.forEach(episode => {
                 const isCurrent = episode.id === currentEpisode?.id;
                 const item = document.createElement('button');
-                item.className = `bottom-sheet_action ${isCurrent ? 'active' : ''}`;
+                item.className = `bottom-sheet-action ${isCurrent ? 'active' : ''}`;
                 item.innerHTML = `
-                    <span class="queue-text">${episode.title}</span>
-                    <span class="queue-duration">${episode.total_duration_secs ? formatTime(episode.total_duration_secs) : ''}</span>
+                    <span>${escapeForSubtitle(episode.title)}</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted)">${episode.total_duration_secs ? formatTime(episode.total_duration_secs) : ''}</span>
                 `;
                 item.addEventListener('click', () => {
-                    closeBottomSheet();
+                    window.closeBottomSheet?.();
                     const { loadEpisode } = window.playerChunk || {};
-                    if (loadEpisode) {
-                        loadEpisode(episode.id);
-                    }
+                    if (loadEpisode) loadEpisode(episode.id);
                 });
                 content.appendChild(item);
             });
         }
-    } catch (_e) {
+    } catch (_) {
         content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Failed to load episodes</p>';
-    }
-
-    sheet.scrollTop = 0;
-}
-
-function closeBottomSheet() {
-    const overlay = document.getElementById('bottom-sheet-overlay');
-    if (overlay) {
-        overlay.classList.add('hidden');
     }
 }
 
@@ -590,7 +650,7 @@ export function showSleepTimerMenu() {
         });
     }
 
-    window.openBottomSheet('Sleep Timer', actions);
+    window.openBottomSheet?.('Sleep Timer', actions);
 }
 
 export function setSleepTimer(seconds) {
