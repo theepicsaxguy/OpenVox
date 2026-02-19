@@ -92,8 +92,20 @@ export function getCurrentEpisode() {
     return currentEpisode;
 }
 
+export function setCurrentEpisode(episode) {
+    currentEpisode = episode;
+}
+
 export function getCurrentChunkIndex() {
     return currentChunkIndex;
+}
+
+export function setCurrentChunkIndex(idx) {
+    currentChunkIndex = idx;
+}
+
+export function getIsFullscreen() {
+    return isFullscreen;
 }
 
 export function getChunks() {

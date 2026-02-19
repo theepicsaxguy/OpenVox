@@ -192,9 +192,12 @@ export function prevChunk() {
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx > 0) {
         savePosition();
-        const audio = playerState.getAudio();
-        loadChunk(chunks[idx - 1].chunk_index);
-        if (audio) audio.play().catch(() => {});
+        const { loadChunk: chunkLoad } = window.playerChunk || {};
+        if (chunkLoad) {
+            chunkLoad(chunks[idx - 1].chunk_index);
+            const audio = playerState.getAudio();
+            if (audio) audio.play().catch(() => {});
+        }
     }
 }
 
@@ -204,9 +207,12 @@ export function nextChunk() {
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx >= 0 && idx < chunks.length - 1) {
         savePosition();
-        const audio = playerState.getAudio();
-        loadChunk(chunks[idx + 1].chunk_index);
-        if (audio) audio.play().catch(() => {});
+        const { loadChunk: chunkLoad } = window.playerChunk || {};
+        if (chunkLoad) {
+            chunkLoad(chunks[idx + 1].chunk_index);
+            const audio = playerState.getAudio();
+            if (audio) audio.play().catch(() => {});
+        }
     }
 }
 
@@ -258,15 +264,18 @@ function updateMuteUI() {
 }
 
 export function updatePlayPauseIcon(playing) {
-    $('play-icon').style.display = playing ? 'none' : 'block';
-    $('pause-icon').style.display = playing ? 'block' : 'none';
+    const playIcon = $('play-icon');
+    const pauseIcon = $('pause-icon');
+    if (playIcon) playIcon.style.display = playing ? 'none' : 'block';
+    if (pauseIcon) pauseIcon.style.display = playing ? 'block' : 'none';
 
-    const btn = $('player-play');
-    if (playing) {
-        btn.classList.add('playing');
-    } else {
-        btn.classList.remove('playing');
-    }
+    const fsPlayIcon = $('fs-play-icon');
+    const fsPauseIcon = $('fs-pause-icon');
+    if (fsPlayIcon) fsPlayIcon.style.display = playing ? 'none' : 'block';
+    if (fsPauseIcon) fsPauseIcon.style.display = playing ? 'block' : 'none';
+
+    const indicator = $('fs-playing-indicator');
+    if (indicator) indicator.classList.toggle('active', playing);
 }
 
 function savePosition(forcePct) {
@@ -310,32 +319,6 @@ export function setPlaybackSpeed(speed) {
         speedSelect.value = speed.toString();
     }
     localStorage.setItem('pocket_tts_playback_speed', speed);
-}
-
-async function loadChunk(chunkIndex) {
-    const episode = playerState.getCurrentEpisode();
-    const chunks = playerState.getChunks();
-
-    playerState.setCurrentChunkIndex(chunkIndex);
-
-    const chunk = chunks.find(c => c.chunk_index === chunkIndex);
-    if (!chunk || !episode) return;
-
-    const url = api.chunkAudioUrl(episode.id, chunkIndex);
-
-    let audio = playerState.getAudio();
-    if (!audio) {
-        audio = new Audio();
-        playerState.setAudio(audio);
-    }
-
-    audio.src = url;
-    audio.load();
-
-    const savedSpeed = localStorage.getItem('pocket_tts_playback_speed');
-    if (savedSpeed) {
-        audio.playbackRate = parseFloat(savedSpeed);
-    }
 }
 
 export { savePosition };
