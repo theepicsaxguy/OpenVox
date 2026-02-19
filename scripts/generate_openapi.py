@@ -12,6 +12,7 @@ The spec is built by:
   4. Letting apispec's MarshmallowPlugin resolve schemas to JSON Schema
 """
 
+import inspect
 import os
 import re
 import sys
@@ -172,7 +173,7 @@ def generate_spec() -> dict:
 
         operations: dict = {}
         for method in methods:
-            doc = (view_func.__doc__ or '').strip() if view_func else ''
+            doc = inspect.cleandoc(view_func.__doc__ or '') if view_func else ''
             summary = doc.split('\n')[0][:50] if doc else ''
 
             operation: dict = {

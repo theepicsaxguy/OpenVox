@@ -16,28 +16,32 @@ paths:
   /health:
     get:
       summary: Health check endpoint for container orchestration.
-      description: "Health check endpoint for container orchestration.\n\n    Returns\
-        \ service status and basic model info."
+      description: 'Health check endpoint for container orchestration.
+
+
+        Returns service status and basic model info.'
       responses:
         '200':
           description: Success
   /v1/voices:
     get:
       summary: List available voices.
-      description: "List available voices.\n\n    Returns OpenAI-compatible voice\
-        \ list format."
+      description: 'List available voices.
+
+
+        Returns OpenAI-compatible voice list format.'
       responses:
         '200':
           description: Success
   /v1/audio/speech:
     post:
       summary: OpenAI-compatible speech generation endpoint.
-      description: "OpenAI-compatible speech generation endpoint.\n\n    Request body:\n\
-        \        model: string (ignored, for compatibility)\n        input: string\
-        \ (required) - Text to synthesize\n        voice: string (optional) - Voice\
-        \ ID or path\n        response_format: string (optional) - Audio format\n\
-        \        stream: boolean (optional) - Enable streaming\n\n    Returns:\n \
-        \       Audio file or streaming audio response"
+      description: "OpenAI-compatible speech generation endpoint.\n\nRequest body:\n\
+        \    model: string (ignored, for compatibility)\n    input: string (required)\
+        \ - Text to synthesize\n    voice: string (optional) - Voice ID or path\n\
+        \    response_format: string (optional) - Audio format\n    stream: boolean\
+        \ (optional) - Enable streaming\n\nReturns:\n    Audio file or streaming audio\
+        \ response"
       responses:
         '200':
           description: Success

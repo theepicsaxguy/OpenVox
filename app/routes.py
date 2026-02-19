@@ -2,6 +2,7 @@
 Flask routes for the OpenAI-compatible TTS API.
 """
 
+import inspect
 import time
 
 from apispec import APISpec
@@ -56,7 +57,7 @@ def openapi_spec():
             for method in methods:
                 method = method.lower()
                 view_func = blueprint.view_functions.get(rule.endpoint)
-                doc = view_func.__doc__.strip() if view_func and view_func.__doc__ else ''
+                doc = inspect.cleandoc(view_func.__doc__) if view_func and view_func.__doc__ else ''
                 summary = doc.split('\n')[0][:50] if doc else ''
 
                 spec.path(

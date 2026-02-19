@@ -217,7 +217,7 @@ const get = (
 /**
  * Health check endpoint for container orchestration.
 
-    Returns service status and basic model info.
+Returns service status and basic model info.
  * @summary Health check endpoint for container orchestration.
  */
 const getHealth = (
@@ -231,7 +231,7 @@ const getHealth = (
 /**
  * List available voices.
 
-    Returns OpenAI-compatible voice list format.
+Returns OpenAI-compatible voice list format.
  * @summary List available voices.
  */
 const getV1Voices = (
@@ -245,15 +245,15 @@ const getV1Voices = (
 /**
  * OpenAI-compatible speech generation endpoint.
 
-    Request body:
-        model: string (ignored, for compatibility)
-        input: string (required) - Text to synthesize
-        voice: string (optional) - Voice ID or path
-        response_format: string (optional) - Audio format
-        stream: boolean (optional) - Enable streaming
+Request body:
+    model: string (ignored, for compatibility)
+    input: string (required) - Text to synthesize
+    voice: string (optional) - Voice ID or path
+    response_format: string (optional) - Audio format
+    stream: boolean (optional) - Enable streaming
 
-    Returns:
-        Audio file or streaming audio response
+Returns:
+    Audio file or streaming audio response
  * @summary OpenAI-compatible speech generation endpoint.
  */
 const postV1AudioSpeech = (
