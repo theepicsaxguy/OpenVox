@@ -39,7 +39,6 @@ def register_routes(bp) -> None:
                 else:
                     return jsonify({'error': 'No file selected'}), 400
             elif request.is_json and request.json.get('git_url'):
-
                 url = request.json['git_url']
                 subpath = request.json.get('git_subpath')
                 data = ingest_git_repository(url, subpath)
