@@ -35,8 +35,8 @@ Tested and working fully with [WingmanAI by Shipbit](https://www.wingman-ai.com/
 ### Docker (Recommended)
 
 ```bash
-git clone https://github.com/teddybear082/pocket-tts-openai_streaming_server.git
-cd pocket-tts-openai_streaming_server
+git clone https://github.com/theepicsaxguy/OpenVox.git
+cd OpenVox
 
 docker compose up -d
 ```
@@ -48,8 +48,8 @@ Data (library database, uploaded sources, generated audio) persists in `./data/`
 ### Python (from source)
 
 ```bash
-git clone https://github.com/teddybear082/pocket-tts-openai_streaming_server.git
-cd pocket-tts-openai_streaming_server
+git clone https://github.com/theepicsaxguy/OpenVox.git
+cd OpenVox
 
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
@@ -168,41 +168,72 @@ Back up by copying this single directory.
 ## Project Structure
 
 ```
-pocket-tts-openai_streaming_server/
+OpenVox/
 ├── app/
-│   ├── __init__.py           # Flask app factory
-│   ├── config.py             # Configuration
-│   ├── logging_config.py     # Logging setup
-│   ├── routes.py             # OpenAI-compatible API endpoints
+│   ├── __init__.py              # Flask app factory
+│   ├── config.py                # Configuration from environment
+│   ├── logging_config.py        # Logging with file rotation
+│   ├── routes.py                # OpenAI-compatible API endpoints
 │   ├── services/
-│   │   ├── audio.py          # Audio conversion
-│   │   └── tts.py            # TTS model service
-│   └── studio/               # Podcast Studio module
-│       ├── __init__.py       # Blueprint registration
-│       ├── db.py             # SQLite database
-│       ├── routes.py         # Studio API endpoints
-│       ├── ingestion.py      # File/URL content extraction
-│       ├── normalizer.py     # Text cleaning for TTS
-│       ├── chunking.py       # Text chunking strategies
-│       ├── generation.py     # Background generation queue
-│       └── audio_assembly.py # Chunk merging for export
+│   │   ├── audio.py             # Audio format conversion, streaming
+│   │   └── tts.py               # TTS model service, voice cache
+│   └── studio/                  # Podcast Studio module
+│       ├── __init__.py          # Blueprint registration
+│       ├── db.py                # SQLite schema and connections
+│       ├── repositories.py      # DB query abstraction layer
+│       ├── schemas.py           # Marshmallow schemas for request bodies
+│       ├── sources_routes.py    # Source CRUD endpoints
+│       ├── episodes_routes.py   # Episode CRUD endpoints
+│       ├── folders_routes.py    # Folder CRUD endpoints
+│       ├── tags_routes.py       # Tag management endpoints
+│       ├── playback_routes.py   # Playback state endpoints
+│       ├── settings_routes.py   # Settings endpoints
+│       ├── library_routes.py    # Library tree, generation status
+│       ├── ingestion.py         # File/URL/text import
+│       ├── git_ingestion.py     # Git repository import
+│       ├── normalizer.py        # Text cleaning for TTS
+│       ├── chunking.py          # Text chunking strategies
+│       ├── breathing.py         # Natural pause insertion
+│       ├── generation.py        # Background generation queue
+│       └── audio_assembly.py    # Chunk merging for export
 ├── static/
-│   ├── css/studio.css        # Studio styles (dark theme)
-│   └── js/studio/            # Vanilla JS ES modules
-│       ├── main.js           # Entry point, router
-│       ├── api.js            # Fetch wrapper
-│       ├── state.js          # Pub/sub store
-│       ├── library.js        # Tree view panel
-│       ├── editor.js         # Import/source/episode views
-│       ├── player.js         # Audio player
-│       └── settings.js       # Settings panel
-├── templates/studio.html     # Three-pane studio shell
-├── data/                     # Persistent data (Docker volume)
-├── voices/                   # Voice files
-├── server.py                 # Entry point
+│   ├── css/
+│   │   ├── studio.css           # Studio styles (dark theme)
+│   │   └── style.css            # Base styles
+│   └── js/studio/               # Vanilla JS ES modules
+│       ├── main.js              # Entry point, router, toast/confirm
+│       ├── utils.js             # Shared helpers (escapeHtml, formatTime, etc.)
+│       ├── dom.js               # Safe DOM manipulation helpers
+│       ├── state.js             # Pub/sub state management
+│       ├── library.js           # Library view, folder tree
+│       ├── editor.js            # Import/source/episode views
+│       ├── settings.js          # Settings panel
+│       ├── player.js            # Player coordinator
+│       ├── player-state.js      # Player state management
+│       ├── player-controls.js   # Play/pause, seek, volume
+│       ├── player-queue.js      # Queue management, shuffle, repeat
+│       ├── player-waveform.js   # Waveform visualization
+│       ├── player-render.js     # Mini/full player rendering
+│       ├── player-chunk.js      # Chunk loading and playback
+│       ├── api.ts               # API wrapper (import from here)
+│       └── client.ts            # Generated TypeScript client (DO NOT EDIT)
+├── scripts/
+│   ├── generate_openapi.py      # Generates OpenAPI spec from Flask routes
+│   └── validate_openapi.py      # Validates OpenAPI spec completeness
+├── e2e/
+│   └── studio.spec.js           # Playwright E2E tests
+├── templates/studio.html        # Studio UI shell
+├── data/                        # Persistent data (Docker volume)
+├── voices/                      # Voice files (150+ included)
+├── server.py                    # Entry point, CLI, Waitress server
 ├── Dockerfile
 ├── docker-compose.yml
-└── requirements.txt
+├── docker-entrypoint.sh         # Container entrypoint
+├── openapi.yaml                 # Generated OpenAPI spec
+├── orval.config.mjs             # Orval client generation config
+├── pyproject.toml               # Python project config, ruff settings
+├── requirements.txt             # Python dependencies
+└── package.json                 # Node.js dependencies and scripts
 ```
 
 ## Development
@@ -212,12 +243,26 @@ pip install -r requirements.txt
 python server.py --log-level DEBUG
 ```
 
+### API Client Generation
+
+After modifying any backend route, regenerate the TypeScript API client:
+
+```bash
+pnpm install
+pnpm run client:generate
+```
+
+This runs `scripts/generate_openapi.py` to produce `openapi.yaml`, then Orval generates `static/js/studio/client.ts`. CI validates that generated files are up to date.
+
 ### Linting
 
 ```bash
 pip install ruff
 ruff check .
 ruff format .
+
+# JavaScript
+pnpm run lint
 ```
 
 ## Troubleshooting
@@ -241,7 +286,7 @@ POCKET_TTS_PORT=8080 docker compose up -d
 ## Credits
 
 - [Pocket-TTS](https://github.com/kyutai-labs/pocket-tts) by Kyutai Labs
-- [pocket-tts-openai_streaming_server](https://github.com/teddybear082/pocket-tts-openai_streaming_server) by teddybear082 (original fork this project builds upon)
+- [pocket-tts-openai_streaming_server](https://github.com/teddybear082/pocket-tts-openai_streaming_server) by teddybear082 (original project this builds upon)
 - Community voice contributors (see [voices/credits.txt](voices/credits.txt))
 
 ## License

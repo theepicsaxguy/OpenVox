@@ -35,6 +35,7 @@ server.py                    # Entry point, CLI, starts Waitress
             ├── playback_routes.py  # Playback state endpoints
             ├── settings_routes.py  # Settings endpoints
             ├── library_routes.py   # Library tree, generation status
+            ├── schemas.py  # Marshmallow schemas for request bodies
             ├── ingestion.py # File/URL/text import
             ├── git_ingestion.py   # Git repository import
             ├── normalizer.py # Text cleaning/normalization
@@ -61,11 +62,14 @@ server.py                    # Entry point, CLI, starts Waitress
 | `app/studio/settings_routes.py` | User settings |
 | `app/studio/library_routes.py` | Library tree, generation status, preview |
 | `app/studio/db.py` | SQLite schema and connection management |
+| `app/studio/schemas.py` | Marshmallow schemas + `@request_body` decorator |
 | `app/studio/generation.py` | Background audio generation queue |
 | `templates/studio.html` | Mobile-first Studio UI shell |
 | `static/js/studio/` | Frontend JavaScript modules |
+| `static/js/studio/utils.js` | Shared utility functions (escapeHtml, formatTime, etc.) |
 | `static/css/studio.css` | Dark mode UI styles |
 | `scripts/generate_openapi.py` | Generates OpenAPI spec from live Flask routes |
+| `scripts/validate_openapi.py` | Validates OpenAPI spec completeness |
 | `orval.config.mjs` | Orval configuration for TypeScript client generation |
 | `static/js/studio/client.ts` | **Generated** TypeScript API client (DO NOT EDIT) |
 | `static/js/studio/api.ts` | Wrapper that extracts `.data` from AxiosResponse |
@@ -94,8 +98,10 @@ All endpoints are auto-generated from Flask routes. Run `pnpm run client:generat
 | `POCKET_TTS_PORT` | `49112` | Port |
 | `POCKET_TTS_VOICES_DIR` | None | Custom voices path |
 | `POCKET_TTS_DATA_DIR` | `./data` | Studio data directory |
+| `POCKET_TTS_MODEL_PATH` | None | Custom model path |
 | `POCKET_TTS_STREAM_DEFAULT` | `true` | Default streaming |
 | `POCKET_TTS_LOG_LEVEL` | `INFO` | Log verbosity |
+| `POCKET_TTS_LOG_DIR` | `./logs` | Log files directory |
 | `HF_TOKEN` | None | HuggingFace token |
 
 ## Workflow
@@ -179,19 +185,20 @@ data/
 - Three-pane optional, not default
 
 ### Screens (Hash Routes)
-- `#home` - Home feed (recent, continue listening, recommended)
+- `#import` - Import new content (full screen, default)
 - `#library` - User's content organized
-- `#search` - Search sources/episodes
-- `#settings` - Settings panel
-- `#import` - Import new content (full screen)
 - `#source/{id}` - Source details
+- `#review/{id}` - Review cleaned text before generation
 - `#episode/{id}` - Episode player (full screen)
+- `#now-playing` - Currently playing episode
+- `#queue` - Playback queue
+- `#settings` - Settings panel
 
 JavaScript modules:
-- `main.js` - Entry point, routing, bottom tab nav
-- `home.js` - Home feed
+- `main.js` - Entry point, routing, bottom tab nav, toast/confirm utilities
+- `utils.js` - Shared helpers: `escapeHtml`, `formatTime`, `$`, `debounce`, `throttle`, `triggerHaptic`
 - `library.js` - Library view, folder tree
-- `search.js` - Search functionality
+- `editor.js` - Import, source, episode views
 - `player.js` - Player coordinator (re-exports all player modules)
 - `player-state.js` - Player state management
 - `player-controls.js` - Play/pause, seek, volume controls
@@ -199,12 +206,11 @@ JavaScript modules:
 - `player-waveform.js` - Waveform visualization
 - `player-render.js` - Mini/full player rendering
 - `player-chunk.js` - Chunk loading and playback
-- `editor.js` - Import, source, episode views
 - `settings.js` - Settings panel
-- `api.ts` - Wrapper with auto .data extraction and URL helpers (import from here)
-- `client.ts` - **Generated** TypeScript API client (DO NOT EDIT)
 - `state.js` - Pub/sub state management
 - `dom.js` - Safe DOM manipulation helpers
+- `api.ts` - Wrapper with auto .data extraction and URL helpers (import from here)
+- `client.ts` - **Generated** TypeScript API client (DO NOT EDIT)
 
 ## Design Principles
 
@@ -241,7 +247,7 @@ NEVER use: generic AI slop aesthetics, overused fonts, cliched purple gradients,
 
 Before writing new code, check if existing solutions exist:
 
-1. **Frontend utilities**: Check `main.js` for `escapeHtml`, `formatTime`, `toast`, `confirm`, etc.
+1. **Frontend utilities**: Check `utils.js` for `escapeHtml`, `formatTime`, `debounce`, `throttle`; check `main.js` for `toast`, `confirm`, `showUndoToast`
 2. **DOM helpers**: Use `dom.js` for safe DOM manipulation (`setText`, `fromHTML`, `createElement`)
 3. **State management**: Use `state.js` pub/sub - don't create new event systems
 4. **API calls**: Use `api.ts` functions (imports from generated `client.ts`)
