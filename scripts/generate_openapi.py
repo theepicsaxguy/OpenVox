@@ -38,15 +38,15 @@ for mod in ['scipy.signal', 'scipy.io', 'numpy.core', 'torch.nn', 'torch.Tensor'
         full = '.'.join(parts[: i + 1])
         sys.modules[full] = parent
 
-import yaml
-from apispec import APISpec
-from apispec.ext.marshmallow import MarshmallowPlugin
-from flask import Flask
+import yaml  # noqa: E402
+from apispec import APISpec  # noqa: E402
+from apispec.ext.marshmallow import MarshmallowPlugin  # noqa: E402
+from flask import Flask  # noqa: E402
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-import re
+import re  # noqa: E402
 
 
 def convert_flask_path(path):
