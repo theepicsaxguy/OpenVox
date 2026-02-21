@@ -10,6 +10,7 @@ import * as playerControls from './player-controls.js';
 import * as playerChunk from './player-chunk.js';
 import * as playerQueue from './player-queue.js';
 import * as playerWaveform from './player-waveform.js';
+import { createElement, clearContent } from './dom.js';
 
 const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -279,39 +280,45 @@ function renderChunkSegments() {
     const chunks = playerState.getChunks();
     const totalDuration = playerState.getTotalDuration();
     if (!chunks.length || !totalDuration) {
-        container.innerHTML = '';
+        clearContent(container);
         return;
     }
 
     if (container.dataset.chunkCount === String(chunks.length)) return;
     container.dataset.chunkCount = String(chunks.length);
 
-    let html = '';
+    clearContent(container);
     let offset = 0;
     for (let i = 0; i < chunks.length; i++) {
         const dur = chunks[i].duration_secs || 0;
         const leftPct = (offset / totalDuration) * 100;
         const widthPct = (dur / totalDuration) * 100;
+
         if (i > 0) {
-            html += `<div class="fs-chunk-divider" style="left:${leftPct}%"></div>`;
+            const divider = createElement('div', {
+                className: 'fs-chunk-divider',
+                style: { left: `${leftPct}%` }
+            });
+            container.appendChild(divider);
         }
-        html += `<div class="fs-chunk-seg" data-chunk="${i}" style="left:${leftPct}%;width:${widthPct}%" title="Part ${i + 1}"></div>`;
+
+        const seg = createElement('div', {
+            className: 'fs-chunk-seg',
+            title: `Part ${i + 1}`,
+            style: { left: `${leftPct}%`, width: `${widthPct}%` }
+        });
+        seg.dataset.chunk = String(i);
+        const chunkRef = chunks[i];
+        seg.addEventListener('click', () => {
+            playerChunk.loadChunk(chunkRef.chunk_index).then(() => {
+                const audio = playerState.getAudio();
+                if (audio) audio.play().catch((e) => console.warn('Chunk play failed:', e.message));
+            });
+        });
+        container.appendChild(seg);
+
         offset += dur;
     }
-    container.innerHTML = html;
-
-    container.querySelectorAll('.fs-chunk-seg').forEach(seg => {
-        seg.addEventListener('click', () => {
-            const chunkIdx = parseInt(seg.dataset.chunk, 10);
-            const chunk = chunks[chunkIdx];
-            if (chunk) {
-                playerChunk.loadChunk(chunk.chunk_index).then(() => {
-                    const audio = playerState.getAudio();
-                    if (audio) audio.play().catch((e) => console.warn('Chunk play failed:', e.message));
-                });
-            }
-        });
-    });
 }
 
 function updateSubtitleDisplay(chunk) {
@@ -342,10 +349,14 @@ function escapeForSubtitle(text) {
 function renderKaraokeIdle(message) {
     const el = $('fs-subtitle-text');
     if (!el) return;
+    clearContent(el);
     const words = message.split(/\s+/);
-    el.innerHTML = words.map(w =>
-        `<span class="karaoke-word spoken">${escapeForSubtitle(w)}</span>`
-    ).join(' ');
+    const fragment = document.createDocumentFragment();
+    words.forEach((w, i) => {
+        if (i > 0) fragment.appendChild(document.createTextNode(' '));
+        fragment.appendChild(createElement('span', { className: 'karaoke-word spoken' }, [w]));
+    });
+    el.appendChild(fragment);
 }
 
 function renderKaraoke(sentences, sentenceIndex, wordIndex) {
@@ -356,14 +367,16 @@ function renderKaraoke(sentences, sentenceIndex, wordIndex) {
     if (!sentence) return;
 
     const words = sentence.split(/\s+/);
-    const html = words.map((word, i) => {
+    clearContent(el);
+    const fragment = document.createDocumentFragment();
+    words.forEach((word, i) => {
+        if (i > 0) fragment.appendChild(document.createTextNode(' '));
         let cls = 'karaoke-word';
         if (i < wordIndex) cls += ' spoken';
         else if (i === wordIndex) cls += ' active';
-        return `<span class="${cls}">${escapeForSubtitle(word)}</span>`;
-    }).join(' ');
-
-    el.innerHTML = html;
+        fragment.appendChild(createElement('span', { className: cls }, [word]));
+    });
+    el.appendChild(fragment);
 }
 
 export function updateSubtitles(text) {
@@ -626,26 +639,34 @@ async function showEpisodeListSheet() {
 
     window.openBottomSheet?.('Episodes', []);
 
-    content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Loading...</p>';
+    const loadingMsg = createElement('p', {
+        style: { color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }
+    }, ['Loading...']);
+    clearContent(content);
+    content.appendChild(loadingMsg);
 
     try {
         const library = await api.getApiStudioLibraryTree();
         const episodes = library.episodes || [];
         const currentEpisode = playerState.getCurrentEpisode();
 
-        content.innerHTML = '';
+        clearContent(content);
 
         if (!episodes.length) {
-            content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No episodes yet</p>';
+            content.appendChild(createElement('p', {
+                style: { color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }
+            }, ['No episodes yet']));
         } else {
             episodes.forEach(episode => {
                 const isCurrent = episode.id === currentEpisode?.id;
-                const item = document.createElement('button');
-                item.className = `bottom-sheet-action ${isCurrent ? 'active' : ''}`;
-                item.innerHTML = `
-                    <span>${escapeForSubtitle(episode.title)}</span>
-                    <span style="font-size:0.8rem;color:var(--text-muted)">${episode.total_duration_secs ? formatTime(episode.total_duration_secs) : ''}</span>
-                `;
+                const item = createElement('button', {
+                    className: `bottom-sheet-action ${isCurrent ? 'active' : ''}`
+                }, [
+                    createElement('span', {}, [episode.title]),
+                    createElement('span', {
+                        style: { fontSize: '0.8rem', color: 'var(--text-muted)' }
+                    }, [episode.total_duration_secs ? formatTime(episode.total_duration_secs) : ''])
+                ]);
                 item.addEventListener('click', () => {
                     window.closeBottomSheet?.();
                     playerChunk.loadEpisode(episode.id);
@@ -655,7 +676,10 @@ async function showEpisodeListSheet() {
         }
     } catch (err) {
         console.error('Failed to load episode list:', err);
-        content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Failed to load episodes</p>';
+        clearContent(content);
+        content.appendChild(createElement('p', {
+            style: { color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }
+        }, ['Failed to load episodes']));
     }
 }
 

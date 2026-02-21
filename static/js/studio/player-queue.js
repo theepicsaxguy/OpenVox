@@ -7,6 +7,7 @@ import * as playerRender from './player-render.js';
 import * as playerControls from './player-controls.js';
 import * as playerChunk from './player-chunk.js';
 import { formatTime } from './utils.js';
+import { createElement, clearContent } from './dom.js';
 
 let queue = [];
 let queueIndex = -1;
@@ -114,19 +115,22 @@ export function renderQueue() {
         queueCount.textContent = remaining === 0 ? 'No chunks remaining' : `${remaining} chunk${remaining !== 1 ? 's' : ''} remaining`;
     }
 
-    queueList.innerHTML = '';
+    clearContent(queueList);
 
     chunks.forEach((chunk, idx) => {
         const isCurrent = idx === currentIdx;
         const isPast = idx < currentIdx;
+        const truncatedText = chunk.text.substring(0, 60) + (chunk.text.length > 60 ? '...' : '');
 
-        const item = document.createElement('div');
-        item.className = `queue-item ${isCurrent ? 'current' : ''} ${isPast ? 'played' : ''}`;
-        item.innerHTML = `
-            <span class="queue-item-num">${idx + 1}</span>
-            <span class="queue-item-text">${chunk.text.substring(0, 60)}${chunk.text.length > 60 ? '...' : ''}</span>
-            <span class="queue-item-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : ''}</span>
-        `;
+        const item = createElement('div', {
+            className: `queue-item ${isCurrent ? 'current' : ''} ${isPast ? 'played' : ''}`
+        }, [
+            createElement('span', { className: 'queue-item-num' }, [String(idx + 1)]),
+            createElement('span', { className: 'queue-item-text' }, [truncatedText]),
+            createElement('span', { className: 'queue-item-duration' }, [
+                chunk.duration_secs ? formatTime(chunk.duration_secs) : ''
+            ])
+        ]);
 
         item.addEventListener('click', () => {
             playerControls.savePosition();
@@ -153,25 +157,32 @@ export function showQueueSheet() {
     if (!sheet || !overlay || !title || !content) return;
 
     title.textContent = 'Queue';
-    content.innerHTML = '';
+    clearContent(content);
 
     const chunks = playerState.getChunks();
     const currentChunkIndex = playerState.getCurrentChunkIndex();
 
     if (!chunks.length) {
-        content.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No chunks available</p>';
+        const emptyMsg = createElement('p', {
+            style: { color: 'var(--text-muted)', padding: '20px', textAlign: 'center' }
+        }, ['No chunks available']);
+        content.appendChild(emptyMsg);
     } else {
         const currentIdx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
         chunks.forEach((chunk, idx) => {
             const isCurrent = idx === currentIdx;
             const isPast = idx < currentIdx;
-            const item = document.createElement('button');
-            item.className = `bottom-sheet_action ${isCurrent ? 'active' : ''} ${isPast ? 'played' : ''}`;
-            item.innerHTML = `
-                <span class="queue-num">${idx + 1}</span>
-                <span class="queue-text">${chunk.text.substring(0, 50)}${chunk.text.length > 50 ? '...' : ''}</span>
-                <span class="queue-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : ''}</span>
-            `;
+            const truncatedText = chunk.text.substring(0, 50) + (chunk.text.length > 50 ? '...' : '');
+
+            const item = createElement('button', {
+                className: `bottom-sheet_action ${isCurrent ? 'active' : ''} ${isPast ? 'played' : ''}`
+            }, [
+                createElement('span', { className: 'queue-num' }, [String(idx + 1)]),
+                createElement('span', { className: 'queue-text' }, [truncatedText]),
+                createElement('span', { className: 'queue-duration' }, [
+                    chunk.duration_secs ? formatTime(chunk.duration_secs) : ''
+                ])
+            ]);
             item.addEventListener('click', () => {
                 playerControls.savePosition();
                 playerChunk.loadChunk(chunk.chunk_index);

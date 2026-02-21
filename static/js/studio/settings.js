@@ -7,6 +7,7 @@ import { client as api } from './api.bundle.js';
 import * as state from './state.js';
 import { toast } from './main.js';
 import { $, escapeHtml } from './utils.js';
+import { createElement, clearContent } from './dom.js';
 
 // ── Load settings ───────────────────────────────────────────────────
 
@@ -123,17 +124,13 @@ async function loadTags() {
 
 function renderTags(tags) {
     const list = $('tags-list');
-    list.innerHTML = '';
+    clearContent(list);
 
     for (const tag of tags) {
-        const chip = document.createElement('div');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `
-            <span>${escapeHtml(tag.name)}</span>
-            <button data-id="${tag.id}" title="Delete tag">&times;</button>
-        `;
-
-        chip.querySelector('button').addEventListener('click', async (e) => {
+        const nameSpan = createElement('span', {}, [tag.name]);
+        const deleteBtn = createElement('button', { title: 'Delete tag' }, ['\u00d7']);
+        deleteBtn.dataset.id = tag.id;
+        deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
             try {
                 await api.deleteApiStudioTagsTagId(tag.id);
@@ -144,6 +141,7 @@ function renderTags(tags) {
             }
         });
 
+        const chip = createElement('div', { className: 'tag-chip' }, [nameSpan, deleteBtn]);
         list.appendChild(chip);
     }
 }
@@ -206,7 +204,7 @@ export async function init() {
         for (const selectId of ['setting-voice', 'setting-voice-mobile']) {
             const voiceSelect = $(selectId);
             if (voiceSelect && Array.isArray(voices)) {
-                voiceSelect.innerHTML = '';
+                clearContent(voiceSelect);
                 for (const v of voices) {
                     const opt = document.createElement('option');
                     opt.value = v.id || v.voice_id;

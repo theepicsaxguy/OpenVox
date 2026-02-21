@@ -8,6 +8,7 @@ import * as state from './state.js';
 import { toast, confirm as confirmDialog } from './main.js';
 import { loadEpisode } from './player.js';
 import { openFullscreenPlayer } from './player-render.js';
+import { createElement, clearContent } from './dom.js';
 
 const SVG_FOLDER = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
     <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
@@ -265,7 +266,7 @@ export async function refreshTree() {
 
 function render(tree) {
     const container = document.getElementById('library-tree');
-    container.innerHTML = '';
+    clearContent(container);
 
     const { folders, sources, episodes } = tree;
     const folderMap = {};
@@ -313,14 +314,16 @@ function render(tree) {
     for (const e of rootEpisodes) container.appendChild(renderEpisodeItem(e));
 
     if (!folders.length && !sources.length && !episodes.length) {
-        const empty = document.createElement('div');
-        empty.className = 'tree-item';
-        empty.style.cssText = 'color: var(--text-muted); padding: 20px;';
-        empty.innerHTML = `
-            <span style="text-align: center; width: 100%; font-size: 0.85rem;">
-                Library is empty.<br>Import content to get started.
-            </span>
-        `;
+        const emptyLabel = createElement('span', {
+            style: { textAlign: 'center', width: '100%', fontSize: '0.85rem' }
+        });
+        emptyLabel.appendChild(document.createTextNode('Library is empty.'));
+        emptyLabel.appendChild(document.createElement('br'));
+        emptyLabel.appendChild(document.createTextNode('Import content to get started.'));
+        const empty = createElement('div', {
+            className: 'tree-item',
+            style: { color: 'var(--text-muted)', padding: '20px' }
+        }, [emptyLabel]);
         container.appendChild(empty);
     }
 }
@@ -328,7 +331,7 @@ function render(tree) {
 function renderRecentlyPlayed(episodes) {
     const section = document.getElementById('recently-played');
     const list = document.getElementById('recently-played-list');
-    list.innerHTML = '';
+    clearContent(list);
 
     const recent = episodes
         .filter(e => e.last_played_at && e.status === 'ready')

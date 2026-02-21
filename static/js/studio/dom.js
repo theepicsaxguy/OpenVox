@@ -8,7 +8,7 @@ export function setText(el, text) {
 }
 
 export function clearContent(el) {
-    el.innerHTML = '';
+    while (el.firstChild) el.removeChild(el.firstChild);
 }
 
 export function setContent(el, html) {

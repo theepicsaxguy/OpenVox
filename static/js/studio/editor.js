@@ -10,7 +10,7 @@ import { refreshTree } from './library.js';
 import { loadEpisode as playerLoadEpisode } from './player.js';
 import { openFullscreenPlayer } from './player-render.js';
 import { escapeHtml, formatTime } from './utils.js';
-import { clearContent, createElement, createPills } from './dom.js';
+import { clearContent, createElement, createPills, fromHTML } from './dom.js';
 
 // ── View switching ──────────────────────────────────────────────────
 
@@ -278,7 +278,7 @@ async function loadReview(sourceId) {
         document.getElementById('review-title').textContent = source.title;
         document.getElementById('review-breadcrumb').textContent = source.title;
         const reviewMeta = document.getElementById('review-meta');
-        reviewMeta.innerHTML = '';
+        clearContent(reviewMeta);
         reviewMeta.appendChild(createPills([
             { text: source.source_type, className: '' },
             { text: `${source.cleaned_text.length.toLocaleString()} chars`, className: '' }
@@ -476,7 +476,7 @@ function initReviewView() {
             await api.putApiStudioSourcesSourceId(sourceId, { cleaned_text: newText });
             textPreview.textContent = newText;
             const metaEl = document.getElementById('review-meta');
-            metaEl.innerHTML = '';
+            clearContent(metaEl);
             metaEl.appendChild(createPills([
                 { text: 'text', className: '' },
                 { text: `${newText.length.toLocaleString()} chars`, className: '' }
@@ -537,7 +537,7 @@ async function loadSource(sourceId) {
         document.getElementById('source-title').textContent = source.title;
         document.getElementById('source-breadcrumb').textContent = source.title;
         const sourceMeta = document.getElementById('source-meta');
-        sourceMeta.innerHTML = '';
+        clearContent(sourceMeta);
         sourceMeta.appendChild(createPills([
             { text: source.source_type, className: '' },
             { text: `${source.cleaned_text.length.toLocaleString()} chars`, className: '' },
@@ -595,7 +595,7 @@ function initSourceView() {
                 await api.putApiStudioSourcesSourceId(sourceId, { cleaned_text: newText });
                 sourceTextPreview.textContent = newText;
                 const sourceMetaEl = document.getElementById('source-meta');
-                sourceMetaEl.innerHTML = '';
+                clearContent(sourceMetaEl);
                 sourceMetaEl.appendChild(createPills([
                     { text: 'text', className: '' },
                     { text: `${newText.length.toLocaleString()} chars`, className: '' },
@@ -926,7 +926,8 @@ function initEpisodeView() {
 
         // Populate voice select
         const voiceSelect = document.getElementById('regen-voice');
-        voiceSelect.innerHTML = '<option value="">Same as before</option>';
+        clearContent(voiceSelect);
+        voiceSelect.appendChild(createElement('option', { value: '' }, ['Same as before']));
 
         const voices = state.get('voices') || (await api.getV1Voices()).data;
         state.set('voices', voices);
@@ -1046,15 +1047,15 @@ function initEpisodeView() {
 function renderSourceTags(tagIds) {
     const container = document.getElementById('source-tags-list');
     if (!container) return;
-    container.innerHTML = '';
+    clearContent(container);
     const allTags = state.get('tags') || [];
     for (const tagId of tagIds) {
         const tag = allTags.find(t => String(t.id) === String(tagId));
         if (!tag) continue;
-        const chip = document.createElement('div');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `<span>${escapeHtml(tag.name)}</span><button data-id="${tag.id}" title="Remove">&times;</button>`;
-        chip.querySelector('button').addEventListener('click', async () => {
+        const nameSpan = createElement('span', {}, [tag.name]);
+        const removeBtn = createElement('button', { title: 'Remove' }, ['\u00d7']);
+        removeBtn.dataset.id = tag.id;
+        removeBtn.addEventListener('click', async () => {
             const sourceId = state.get('currentSourceId');
             const updated = tagIds.filter(id => String(id) !== String(tag.id));
             try {
@@ -1066,6 +1067,7 @@ function renderSourceTags(tagIds) {
                 toast(e.message, 'error');
             }
         });
+        const chip = createElement('div', { className: 'tag-chip' }, [nameSpan, removeBtn]);
         container.appendChild(chip);
     }
 }
@@ -1073,15 +1075,15 @@ function renderSourceTags(tagIds) {
 function renderEpisodeTags(tagIds) {
     const container = document.getElementById('episode-tags-list');
     if (!container) return;
-    container.innerHTML = '';
+    clearContent(container);
     const allTags = state.get('tags') || [];
     for (const tagId of tagIds) {
         const tag = allTags.find(t => String(t.id) === String(tagId));
         if (!tag) continue;
-        const chip = document.createElement('div');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `<span>${escapeHtml(tag.name)}</span><button data-id="${tag.id}" title="Remove">&times;</button>`;
-        chip.querySelector('button').addEventListener('click', async () => {
+        const nameSpan = createElement('span', {}, [tag.name]);
+        const removeBtn = createElement('button', { title: 'Remove' }, ['\u00d7']);
+        removeBtn.dataset.id = tag.id;
+        removeBtn.addEventListener('click', async () => {
             const episodeId = state.get('currentEpisodeId');
             const updated = tagIds.filter(id => String(id) !== String(tag.id));
             try {
@@ -1093,6 +1095,7 @@ function renderEpisodeTags(tagIds) {
                 toast(e.message, 'error');
             }
         });
+        const chip = createElement('div', { className: 'tag-chip' }, [nameSpan, removeBtn]);
         container.appendChild(chip);
     }
 }
@@ -1101,7 +1104,9 @@ function populateTagSelect(selectId, excludeIds = []) {
     const allTags = state.get('tags') || [];
     const select = document.getElementById(selectId);
     if (!select) return;
-    select.innerHTML = '<option value="">Add tag...</option>';
+    clearContent(select);
+    const defaultOpt = createElement('option', { value: '' }, ['Add tag...']);
+    select.appendChild(defaultOpt);
     for (const tag of allTags) {
         if (excludeIds.includes(String(tag.id))) continue;
         const opt = document.createElement('option');
@@ -1123,7 +1128,7 @@ async function populateVoiceSelect(selectId) {
     const sel = document.getElementById(selectId);
     if (!sel) return;
     const currentVal = sel.value;
-    sel.innerHTML = '';
+    clearContent(sel);
     for (const v of voices) {
         const opt = document.createElement('option');
         opt.value = v.id || v.voice_id;
@@ -1158,12 +1163,16 @@ async function initLibraryView() {
         const episodes = await api.getApiStudioEpisodes();
 
         if (episodes.length === 0) {
-            container.innerHTML = '<div class="empty-state"><p>No episodes yet</p></div>';
+            clearContent(container);
+            container.appendChild(createElement('div', { className: 'empty-state' }, [
+                createElement('p', {}, ['No episodes yet'])
+            ]));
         } else {
             clearContent(container);
             for (const ep of episodes) {
                 const card = createElement('div', { className: 'library-card', data_episode_id: ep.id, data_chunk_index: 0 });
-                card.innerHTML = '<div class="library-card-artwork"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>';
+                const artwork = fromHTML('<div class="library-card-artwork"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>');
+                card.appendChild(artwork);
                 const info = createElement('div', { className: 'library-card-info' }, [
                     createElement('h4', {}, [escapeHtml(ep.title)]),
                     createElement('p', {}, [`${ep.chunk_count || 0} chunks`])
@@ -1181,12 +1190,16 @@ async function initLibraryView() {
         const sources = await api.getApiStudioSources();
 
         if (sources.length === 0) {
-            sourcesContainer.innerHTML = '<div class="empty-state"><p>No sources yet</p></div>';
+            clearContent(sourcesContainer);
+            sourcesContainer.appendChild(createElement('div', { className: 'empty-state' }, [
+                createElement('p', {}, ['No sources yet'])
+            ]));
         } else {
             clearContent(sourcesContainer);
             for (const src of sources) {
                 const card = createElement('div', { className: 'library-card', data_source_id: src.id });
-                card.innerHTML = '<div class="library-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>';
+                const iconDiv = fromHTML('<div class="library-card-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>');
+                card.appendChild(iconDiv);
                 const info = createElement('div', { className: 'library-card-info' }, [
                     createElement('h4', {}, [escapeHtml(src.title)]),
                     createElement('p', {}, [src.source_type])
@@ -1200,7 +1213,10 @@ async function initLibraryView() {
         }
     } catch (err) {
         console.error('Failed to load library:', err);
-        container.innerHTML = '<div class="empty-state"><p>Failed to load library</p></div>';
+        clearContent(container);
+        container.appendChild(createElement('div', { className: 'empty-state' }, [
+            createElement('p', {}, ['Failed to load library'])
+        ]));
     }
 }
 

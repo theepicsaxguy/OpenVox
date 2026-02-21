@@ -47,10 +47,17 @@ export function showUndoToast(message, onUndo, duration = 2000) {
     const container = document.getElementById('toast-container');
     const el = document.createElement('div');
     el.className = 'toast undo-toast';
-    el.innerHTML = `
-        <span class="undo-message">${message}</span>
-        <button class="undo-btn" id="undo-btn">Undo</button>
-    `;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'undo-message';
+    msgSpan.textContent = message;
+
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'undo-btn';
+    undoBtn.textContent = 'Undo';
+
+    el.appendChild(msgSpan);
+    el.appendChild(undoBtn);
     container.appendChild(el);
 
     requestAnimationFrame(() => {
@@ -63,7 +70,7 @@ export function showUndoToast(message, onUndo, duration = 2000) {
         });
     });
 
-    document.getElementById('undo-btn').addEventListener('click', () => {
+    undoBtn.addEventListener('click', () => {
         clearTimeout(undoTimeout);
         if (undoCallback) undoCallback();
         el.style.opacity = '0';
@@ -239,7 +246,7 @@ function initBottomSheet() {
         const titleEl = document.getElementById('bottom-sheet-title');
 
         titleEl.textContent = title;
-        content.innerHTML = '';
+        while (content.firstChild) content.removeChild(content.firstChild);
 
         actions.forEach(action => {
             if (action.sep) {
