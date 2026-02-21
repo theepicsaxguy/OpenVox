@@ -158,7 +158,7 @@ test.describe('Issue 1: Click/Tap Interactions', () => {
         const errors = [];
         page.on('pageerror', err => errors.push(err.message));
 
-        const routes = ['#import', '#library', '#settings', '#now-playing'];
+        const routes = ['#import', '#library', '#settings', '#search'];
         for (const route of routes) {
             await page.goto(BASE + '/' + route);
             await page.waitForTimeout(800);
@@ -266,7 +266,7 @@ test.describe('Issue 3: Mobile Layout', () => {
     test('all views fill the screen on mobile without scroll lock', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 812 });
 
-        const routes = ['#import', '#library', '#settings', '#now-playing'];
+        const routes = ['#import', '#library', '#settings', '#search'];
         for (const route of routes) {
             await page.goto(BASE + '/' + route);
             await page.waitForTimeout(600);

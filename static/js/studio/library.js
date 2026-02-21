@@ -785,7 +785,8 @@ export function init() {
     const nowPlayingBtn = document.getElementById('btn-now-playing');
     if (nowPlayingBtn) {
         nowPlayingBtn.addEventListener('click', () => {
-            window.location.hash = '#now-playing';
+            const { openFullscreenPlayer } = window.playerRender || {};
+            if (openFullscreenPlayer) openFullscreenPlayer();
         });
     }
 

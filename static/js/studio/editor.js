@@ -1130,17 +1130,14 @@ async function populateVoiceSelect(selectId) {
 
 function loadNowPlaying() {
     clearEpisodeRefresh();
-    state.set('currentView', 'now-playing');
-    showView('now-playing');
-    refreshTree();
-
-    // Update queue if already playing
-    if (state.get('playingEpisodeId')) {
-        import('./player.js').then(player => {
-            // Trigger queue update
-            player.loadEpisode(state.get('playingEpisodeId'), state.get('playingChunkIndex'));
-        });
+    const { openFullscreenPlayer } = window.playerRender || {};
+    if (openFullscreenPlayer && state.get('playingEpisodeId')) {
+        openFullscreenPlayer();
     }
+    state.set('currentView', 'library');
+    showView('library');
+    refreshTree();
+    initLibraryView();
 }
 
 // ── Library View (Mobile Full Page) ─────────────────────────────────────
@@ -1219,8 +1216,11 @@ export function route(hash) {
         state.set('currentView', 'library');
         showView('library');
         initLibraryView();
+    } else if (parts[0] === 'search') {
+        state.set('currentView', 'library');
+        showView('library');
+        initLibraryView();
     } else if (parts[0] === 'settings') {
-        // Show settings (full page on mobile, drawer on desktop)
         state.set('currentView', 'settings');
         if (window.innerWidth <= 1024) {
             showView('settings');

@@ -94,7 +94,8 @@ export function getPrevInQueue() {
 }
 
 export function showQueue() {
-    window.location.hash = '#now-playing';
+    const { openFullscreenPlayer } = window.playerRender || {};
+    if (openFullscreenPlayer) openFullscreenPlayer();
 }
 
 export function renderQueue() {
