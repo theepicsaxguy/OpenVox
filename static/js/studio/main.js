@@ -439,8 +439,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     initEditor();
     initPlayer();
     initLibrary();
-    await initSettings();
 
     window.addEventListener('hashchange', handleRoute);
     handleRoute();
+
+    try {
+        await initSettings();
+    } catch (e) {
+        console.error('Settings init failed (routing still works):', e);
+    }
 });

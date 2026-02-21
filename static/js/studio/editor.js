@@ -14,18 +14,22 @@ import { clearContent, createElement, createPills } from './dom.js';
 // ── View switching ──────────────────────────────────────────────────
 
 function showView(name) {
-    document.querySelectorAll('.stage-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.stage-view').forEach(v => {
+        v.classList.remove('active');
+        v.style.removeProperty('opacity');
+        v.style.removeProperty('transform');
+        v.style.removeProperty('transition');
+    });
     const el = document.getElementById(`view-${name}`);
     if (el) {
         el.classList.add('active');
-        // Trigger animation
+        el.style.transition = 'none';
         el.style.opacity = '0';
         el.style.transform = 'translateY(10px)';
-        requestAnimationFrame(() => {
-            el.style.transition = 'all 0.4s ease';
-            el.style.opacity = '1';
-            el.style.transform = 'translateY(0)';
-        });
+        void el.offsetHeight;
+        el.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
     }
 }
 
