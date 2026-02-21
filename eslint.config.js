@@ -69,6 +69,6 @@ export default [
         },
     },
     {
-        ignores: ['e2e/**/*.js', 'playwright.config.js', '.venv/**', 'node_modules/**'],
+        ignores: ['e2e/**/*.js', 'playwright.config.js', '.venv/**', 'node_modules/**', 'static/js/studio/api.bundle.js'],
     },
 ];

@@ -340,12 +340,6 @@ function updateSubtitleDisplay(chunk) {
     }
 }
 
-function escapeForSubtitle(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
 function renderKaraokeIdle(message) {
     const el = $('fs-subtitle-text');
     if (!el) return;

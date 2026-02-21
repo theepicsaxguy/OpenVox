@@ -6,7 +6,7 @@
 import { client as api } from './api.bundle.js';
 import * as state from './state.js';
 import { toast } from './main.js';
-import { $, escapeHtml } from './utils.js';
+import { $ } from './utils.js';
 import { createElement, clearContent } from './dom.js';
 
 // ── Load settings ───────────────────────────────────────────────────

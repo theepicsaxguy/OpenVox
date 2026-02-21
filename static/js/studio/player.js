@@ -21,7 +21,6 @@ import * as playerControls from './player-controls.js';
 import * as playerWaveform from './player-waveform.js';
 import * as playerChunk from './player-chunk.js';
 
-
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideUp {
