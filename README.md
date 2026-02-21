@@ -10,27 +10,29 @@ Tested and working fully with [WingmanAI by Shipbit](https://www.wingman-ai.com/
 
 ### Desktop
 
-| Import | Library | Settings | Now Playing |
-|--------|---------|----------|-------------|
-| ![Desktop Import](docs/screenshots/desktop-import.png) | ![Desktop Library](docs/screenshots/desktop-library.png) | ![Desktop Settings](docs/screenshots/desktop-settings.png) | ![Desktop Now Playing](docs/screenshots/desktop-now-playing.png) |
+| Add Content | Library | Settings | Player |
+|-------------|---------|----------|--------|
+| ![Desktop Import](docs/screenshots/desktop-import.png) | ![Desktop Library](docs/screenshots/desktop-library.png) | ![Desktop Settings](docs/screenshots/desktop-settings.png) | ![Desktop Player](docs/screenshots/desktop-now-playing.png) |
 
 ### Mobile
 
-| Import | Library | Settings | Now Playing |
-|--------|---------|----------|-------------|
-| ![Mobile Import](docs/screenshots/mobile-import.png) | ![Mobile Library](docs/screenshots/mobile-library.png) | ![Mobile Settings](docs/screenshots/mobile-settings.png) | ![Mobile Now Playing](docs/screenshots/mobile-now-playing.png) |
+| Add Content | Library | Settings | Player |
+|-------------|---------|----------|--------|
+| ![Mobile Import](docs/screenshots/mobile-import.png) | ![Mobile Library](docs/screenshots/mobile-library.png) | ![Mobile Settings](docs/screenshots/mobile-settings.png) | ![Mobile Player](docs/screenshots/mobile-now-playing.png) |
 
 ## Features
 
 **OpenVox (Web UI at `/`)**
-- Import content from files (.md, .txt), URLs, or pasted text
+- Import content from files (.md, .txt), URLs, pasted text, or git repos
 - Automatic text cleaning and normalization for TTS
 - Configurable chunking strategies (paragraph, sentence, heading, max chars)
 - Background audio generation with progress tracking
-- Chunk-based audio player with seek, skip, and auto-advance
+- Full-screen player with karaoke-style word-by-word subtitles
+- Chunked progress bar with tap-to-jump chapter segments
+- Playback speed control (0.5x–3x), sleep timer, skip forward/back
 - Persistent library with folders, tags, and playback position
-- Drag-and-drop organization
-- Dark theme, keyboard shortcuts, responsive layout
+- Mini-player bar with tap-to-expand fullscreen
+- Dark theme, keyboard shortcuts, mobile-first responsive design
 
 **OpenAI-Compatible API**
 - `POST /v1/audio/speech` — generate speech (streaming + file)
@@ -74,12 +76,12 @@ python server.py
 
 ## Studio Workflow
 
-1. **Import** — upload a file, paste a URL, or type/paste text
+1. **Add content** — upload a file, paste a URL, clone a git repo, or type/paste text
 2. **Preview** — see raw vs cleaned text side-by-side
 3. **Chunk** — choose strategy and preview chunk boundaries
 4. **Generate** — select voice and format, queue for background generation
-5. **Listen** — play through chunks with a podcast-style player
-6. **Organize** — folders, tags, playback progress in the library tree
+5. **Listen** — full-screen player with karaoke subtitles and chunked scrubber
+6. **Organize** — folders, tags, playback progress in the library
 
 ## API Usage
 
@@ -227,7 +229,7 @@ OpenVox/
 │       ├── player-controls.js   # Play/pause, seek, volume
 │       ├── player-queue.js      # Queue management, shuffle, repeat
 │       ├── player-waveform.js   # Waveform visualization
-│       ├── player-render.js     # Mini/full player rendering
+│       ├── player-render.js     # Mini/full player, karaoke subtitles
 │       ├── player-chunk.js      # Chunk loading and playback
 │       ├── api.js               # Fetch-based API client (import from here)
 │       ├── api.ts               # TypeScript API wrapper (build-step only)
