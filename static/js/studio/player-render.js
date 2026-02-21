@@ -246,16 +246,23 @@ export function updateFullscreenUI() {
     const chunks = playerState.getChunks();
     const currentChunkIndex = playerState.getCurrentChunkIndex();
     const chunk = chunks.find(c => c.chunk_index === currentChunkIndex);
+    const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
 
     const titleEl = $('fs-track-title');
     if (titleEl) titleEl.textContent = episode.title;
 
-    const episodeInfoEl = $('fs-episode-info');
     const totalDuration = playerState.getTotalDuration();
+    const episodeInfoEl = $('fs-episode-info');
     if (episodeInfoEl) {
-        const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
         episodeInfoEl.textContent = totalDuration > 0
             ? `Part ${idx + 1} of ${chunks.length} · ${formatTime(totalDuration)}`
+            : '';
+    }
+
+    const chunkLabel = $('fs-chunk-label');
+    if (chunkLabel) {
+        chunkLabel.textContent = chunks.length > 1
+            ? `Part ${idx + 1} of ${chunks.length}`
             : '';
     }
 
@@ -266,10 +273,8 @@ export function updateFullscreenUI() {
     if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
     if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
 
-    const indicator = $('fs-playing-indicator');
-    if (indicator) indicator.classList.toggle('active', isPlaying);
-
     updateSubtitleDisplay(chunk);
+    renderChunkSegments();
 
     const currentTime = playerState.getCurrentTime();
     if (totalDuration > 0) {
@@ -286,44 +291,67 @@ export function updateFullscreenUI() {
     }
 }
 
+function renderChunkSegments() {
+    const container = $('fs-chunk-segments');
+    if (!container) return;
+
+    const chunks = playerState.getChunks();
+    const totalDuration = playerState.getTotalDuration();
+    if (!chunks.length || !totalDuration) {
+        container.innerHTML = '';
+        return;
+    }
+
+    if (container.dataset.chunkCount === String(chunks.length)) return;
+    container.dataset.chunkCount = String(chunks.length);
+
+    let html = '';
+    let offset = 0;
+    for (let i = 0; i < chunks.length; i++) {
+        const dur = chunks[i].duration_secs || 0;
+        const leftPct = (offset / totalDuration) * 100;
+        const widthPct = (dur / totalDuration) * 100;
+        if (i > 0) {
+            html += `<div class="fs-chunk-divider" style="left:${leftPct}%"></div>`;
+        }
+        html += `<div class="fs-chunk-seg" data-chunk="${i}" style="left:${leftPct}%;width:${widthPct}%" title="Part ${i + 1}"></div>`;
+        offset += dur;
+    }
+    container.innerHTML = html;
+
+    container.querySelectorAll('.fs-chunk-seg').forEach(seg => {
+        seg.addEventListener('click', () => {
+            const chunkIdx = parseInt(seg.dataset.chunk, 10);
+            const chunk = chunks[chunkIdx];
+            if (chunk) {
+                const { loadChunk } = window.playerChunk || {};
+                if (loadChunk) {
+                    loadChunk(chunk.chunk_index).then(() => {
+                        const audio = playerState.getAudio();
+                        if (audio) audio.play().catch(() => {});
+                    });
+                }
+            }
+        });
+    });
+}
+
 function updateSubtitleDisplay(chunk) {
     if (chunk && chunk.text) {
         playerState.setCurrentSubtitleText(chunk.text);
-        const sentences = chunk.text.split(/(?<=[.!?])\s+/);
+        const sentences = chunk.text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
         playerState.setSubtitleSentences(sentences);
         const timings = sentences.map(s => {
             const wordCount = s.split(/\s+/).length;
             return wordCount / 2.5;
         });
         playerState.setSubtitleTimings(timings);
-        renderSubtitles(sentences, 0);
+        renderKaraoke(sentences, 0, -1);
     } else {
         playerState.setCurrentSubtitleText('');
         playerState.setSubtitleSentences([]);
         playerState.setSubtitleTimings([]);
-        const el = $('fs-subtitle-text');
-        if (el) el.innerHTML = '<span class="subtitle-sentence active">Waiting for audio...</span>';
-    }
-}
-
-function renderSubtitles(sentences, activeIndex) {
-    const el = $('fs-subtitle-text');
-    if (!el || !sentences.length) return;
-
-    const start = Math.max(0, activeIndex - 2);
-    const end = Math.min(sentences.length, activeIndex + 3);
-
-    let html = '';
-    for (let i = start; i < end; i++) {
-        const cls = i === activeIndex ? 'active' : (i < activeIndex ? 'prev' : '');
-        const text = escapeForSubtitle(sentences[i]);
-        html += `<span class="subtitle-sentence ${cls}" data-idx="${i}">${text}</span>`;
-    }
-    el.innerHTML = html;
-
-    const activeSentence = el.querySelector('.subtitle-sentence.active');
-    if (activeSentence) {
-        activeSentence.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        renderKaraokeIdle('Waiting for audio...');
     }
 }
 
@@ -333,15 +361,42 @@ function escapeForSubtitle(text) {
     return div.innerHTML;
 }
 
+function renderKaraokeIdle(message) {
+    const el = $('fs-subtitle-text');
+    if (!el) return;
+    const words = message.split(/\s+/);
+    el.innerHTML = words.map(w =>
+        `<span class="karaoke-word spoken">${escapeForSubtitle(w)}</span>`
+    ).join(' ');
+}
+
+function renderKaraoke(sentences, sentenceIndex, wordIndex) {
+    const el = $('fs-subtitle-text');
+    if (!el || !sentences.length) return;
+
+    const sentence = sentences[Math.min(sentenceIndex, sentences.length - 1)];
+    if (!sentence) return;
+
+    const words = sentence.split(/\s+/);
+    const html = words.map((word, i) => {
+        let cls = 'karaoke-word';
+        if (i < wordIndex) cls += ' spoken';
+        else if (i === wordIndex) cls += ' active';
+        return `<span class="${cls}">${escapeForSubtitle(word)}</span>`;
+    }).join(' ');
+
+    el.innerHTML = html;
+}
+
 export function updateSubtitles(text) {
     const subtitleEl = $('fs-subtitle-text');
     if (!subtitleEl) return;
     if (!text) {
-        subtitleEl.innerHTML = '<span class="subtitle-sentence active">No subtitle available</span>';
+        renderKaraokeIdle('No subtitle available');
         return;
     }
-    const sentences = text.split(/(?<=[.!?])\s+/);
-    renderSubtitles(sentences, 0);
+    const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+    renderKaraoke(sentences, 0, -1);
 }
 
 export function updateSubtitlesSync() {
@@ -365,28 +420,29 @@ export function updateSubtitlesSync() {
         currentSentenceIndex = i;
     }
 
-    renderSubtitles(subtitleSentences, currentSentenceIndex);
+    const sentence = subtitleSentences[currentSentenceIndex];
+    if (!sentence) return;
+
+    const sentenceStart = subtitleTimings.slice(0, currentSentenceIndex).reduce((a, b) => a + b, 0);
+    const sentenceDuration = subtitleTimings[currentSentenceIndex] || 1;
+    const timeInSentence = currentTime - sentenceStart;
+    const progress = Math.max(0, Math.min(1, timeInSentence / sentenceDuration));
+
+    const words = sentence.split(/\s+/);
+    const activeWordIndex = Math.floor(progress * words.length);
+
+    renderKaraoke(subtitleSentences, currentSentenceIndex, activeWordIndex);
 }
 
 export function updateCoverArt() {
     const coverImage = $('fs-cover-image');
-    const coverPlaceholder = $('fs-cover-placeholder');
     const episode = playerState.getCurrentEpisode();
 
-    if (!episode) return;
+    if (!episode || !coverImage) return;
 
     const sourceId = episode.source_id;
     if (sourceId) {
-        const coverUrl = `/api/studio/sources/${sourceId}/cover`;
-        coverImage.src = coverUrl;
-        coverImage.onload = () => {
-            coverImage.classList.remove('hidden');
-            coverPlaceholder.classList.add('hidden');
-        };
-        coverImage.onerror = () => {
-            coverImage.classList.add('hidden');
-            coverPlaceholder.classList.remove('hidden');
-        };
+        coverImage.src = `/api/studio/sources/${sourceId}/cover`;
     }
 }
 

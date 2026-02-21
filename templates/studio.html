@@ -130,8 +130,8 @@
                 <!-- View: Import -->
                 <div id="view-import" class="stage-view active">
                     <div class="view-hero">
-                        <h1 class="hero-title">Import Content</h1>
-                        <p class="hero-subtitle">Transform your text into spoken audio</p>
+                        <h1 class="hero-title">Add something to listen to</h1>
+                        <p class="hero-subtitle">Paste text, upload a file, or grab a URL</p>
                     </div>
 
                     <div class="import-workspace">
@@ -246,7 +246,7 @@
                                     Preview
                                 </button>
                                 <button class="btn btn-primary" id="btn-import">
-                                    <span>Import Content</span>
+                                    <span>Add to Library</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <line x1="5" y1="12" x2="19" y2="12"/>
                                         <polyline points="12 5 19 12 12 19"/>
@@ -1101,12 +1101,12 @@
             </svg>
             <span>Library</span>
         </a>
-        <a href="#now-playing" class="mobile-nav-item" data-route="now-playing">
+        <a href="#search" class="mobile-nav-item" data-route="search">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <circle cx="12" cy="12" r="10"/>
-                <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <span>Playing</span>
+            <span>Search</span>
         </a>
         <a href="#settings" class="mobile-nav-item" data-route="settings">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -1126,7 +1126,8 @@
                 </svg>
             </button>
             <div class="fs-header-center">
-                <span class="fs-player-label">NOW PLAYING</span>
+                <span class="fs-track-title-small" id="fs-track-title">Episode Title</span>
+                <span class="fs-episode-info-small" id="fs-episode-info">Tap play to begin</span>
             </div>
             <button class="fs-btn-more" id="fs-btn-more" aria-label="More options">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1138,41 +1139,29 @@
         </div>
 
         <div class="fs-body">
-            <!-- Cover + Track Info (shrinkable) -->
-            <div class="fs-hero-section">
-                <div class="fs-cover-art" id="fs-cover-art">
-                    <img id="fs-cover-image" src="" alt="Cover art" class="hidden"/>
-                    <div class="fs-cover-placeholder" id="fs-cover-placeholder">
-                        <div class="fs-cover-pulse"></div>
-                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
-                        </svg>
-                    </div>
-                    <div class="fs-playing-indicator" id="fs-playing-indicator">
-                        <span></span><span></span><span></span><span></span>
-                    </div>
+            <!-- Karaoke Subtitle Panel - THE ENTIRE CENTER OF THE SCREEN -->
+            <div class="fs-karaoke-panel" id="fs-subtitles-container">
+                <div class="fs-karaoke-sentence" id="fs-subtitle-text">
+                    <span class="karaoke-word">Tap</span>
+                    <span class="karaoke-word">play</span>
+                    <span class="karaoke-word">to</span>
+                    <span class="karaoke-word">start</span>
+                    <span class="karaoke-word">listening</span>
                 </div>
-                <div class="fs-track-info">
-                    <h2 id="fs-track-title">Episode Title</h2>
-                    <p id="fs-episode-info">Tap play to begin</p>
+                <div class="fs-chunk-indicator" id="fs-chunk-indicator">
+                    <span class="chunk-label" id="fs-chunk-label">Part 1 of 1</span>
                 </div>
             </div>
 
-            <!-- Subtitles (the star of the show) -->
-            <div class="fs-subtitles" id="fs-subtitles-container">
-                <div class="fs-subtitle-scroll">
-                    <div class="fs-subtitle-text" id="fs-subtitle-text">
-                        <span class="subtitle-sentence active">Tap play to start listening</span>
-                    </div>
-                </div>
-            </div>
+            <!-- Hidden cover art for MediaSession -->
+            <img id="fs-cover-image" src="" alt="" class="hidden" style="display:none"/>
 
-            <!-- Controls Section (fixed, never disappears) -->
+            <!-- Controls Section (pinned to bottom) -->
             <div class="fs-controls-dock">
-                <!-- Progress -->
+                <!-- Chunked Progress Bar -->
                 <div class="fs-progress-container">
-                    <div class="fs-progress-track">
+                    <div class="fs-progress-track" id="fs-progress-track">
+                        <div class="fs-chunk-segments" id="fs-chunk-segments"></div>
                         <div class="fs-progress-fill" id="fs-progress-fill"></div>
                         <input type="range" class="fs-scrubber" id="fs-scrubber" min="0" max="100" value="0" step="0.1"/>
                     </div>
@@ -1184,6 +1173,10 @@
 
                 <!-- Main Controls -->
                 <div class="fs-main-controls">
+                    <button class="fs-speed-pill" id="fs-speed-pill" aria-label="Playback speed">
+                        <span id="fs-speed-label">1x</span>
+                    </button>
+
                     <button class="fs-nav-btn" id="fs-btn-prev" aria-label="Previous chunk">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                             <polygon points="19 20 9 12 19 4 19 20"/>
@@ -1223,16 +1216,9 @@
                             <line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2.5"/>
                         </svg>
                     </button>
-                </div>
 
-                <!-- Bottom Controls Row -->
-                <div class="fs-bottom-row">
-                    <button class="fs-speed-pill" id="fs-speed-pill" aria-label="Playback speed">
-                        <span id="fs-speed-label">1x</span>
-                    </button>
-
-                    <button class="fs-control-btn" id="fs-btn-playlist" title="Queue">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <button class="fs-speed-pill fs-queue-pill" id="fs-btn-playlist" aria-label="Queue" title="Queue">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="8" y1="6" x2="21" y2="6"/>
                             <line x1="8" y1="12" x2="21" y2="12"/>
                             <line x1="8" y1="18" x2="21" y2="18"/>
@@ -1241,7 +1227,10 @@
                             <line x1="3" y1="18" x2="3.01" y2="18"/>
                         </svg>
                     </button>
+                </div>
 
+                <!-- Bottom Controls Row -->
+                <div class="fs-bottom-row">
                     <button class="fs-control-btn" id="fs-btn-sleep" title="Sleep timer">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
@@ -1275,6 +1264,12 @@
                 </div>
             </div>
         </div>
+
+        <!-- Hidden elements for cover art loading -->
+        <div id="fs-cover-art" style="display:none">
+            <div id="fs-cover-placeholder"></div>
+        </div>
+        <div id="fs-playing-indicator" style="display:none"></div>
     </div>
 
     <!-- Bottom Sheet Context Menu -->

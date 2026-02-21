@@ -209,11 +209,13 @@ function initMobileNavigation() {
         if (hash.startsWith('#episode') || hash.startsWith('#source') || hash.startsWith('#review')) {
             route = 'library';
         } else if (hash === '#now-playing' || hash === '#queue') {
-            route = 'now-playing';
+            route = 'library';
         } else if (hash === '#settings') {
             route = 'settings';
         } else if (hash === '#library') {
             route = 'library';
+        } else if (hash === '#search') {
+            route = 'search';
         } else if (hash === '#import' || hash === '' || hash === '#') {
             route = 'import';
         }
