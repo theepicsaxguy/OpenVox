@@ -37,6 +37,14 @@ export function on(key, fn) {
     };
 }
 
+export function emit(key, value) {
+    if (_listeners[key]) {
+        for (const fn of _listeners[key]) {
+            try { fn(value); } catch (e) { console.error('State listener error:', e); }
+        }
+    }
+}
+
 export function getAll() {
     return { ..._state };
 }

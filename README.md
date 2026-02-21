@@ -6,6 +6,20 @@ Built on top of an OpenAI-compatible TTS API server. Any OpenAI TTS client can s
 
 Tested and working fully with [WingmanAI by Shipbit](https://www.wingman-ai.com/). Due to low resource use, can be used for real time local text to speech even while playing intensive video games (even in VR!) with WingmanAI.
 
+## Screenshots
+
+### Desktop
+
+| Import | Library | Settings | Now Playing |
+|--------|---------|----------|-------------|
+| ![Desktop Import](docs/screenshots/desktop-import.png) | ![Desktop Library](docs/screenshots/desktop-library.png) | ![Desktop Settings](docs/screenshots/desktop-settings.png) | ![Desktop Now Playing](docs/screenshots/desktop-now-playing.png) |
+
+### Mobile
+
+| Import | Library | Settings | Now Playing |
+|--------|---------|----------|-------------|
+| ![Mobile Import](docs/screenshots/mobile-import.png) | ![Mobile Library](docs/screenshots/mobile-library.png) | ![Mobile Settings](docs/screenshots/mobile-settings.png) | ![Mobile Now Playing](docs/screenshots/mobile-now-playing.png) |
+
 ## Features
 
 **OpenVox (Web UI at `/`)**
@@ -215,7 +229,8 @@ OpenVox/
 │       ├── player-waveform.js   # Waveform visualization
 │       ├── player-render.js     # Mini/full player rendering
 │       ├── player-chunk.js      # Chunk loading and playback
-│       ├── api.ts               # API wrapper (import from here)
+│       ├── api.js               # Fetch-based API client (import from here)
+│       ├── api.ts               # TypeScript API wrapper (build-step only)
 │       └── client.ts            # Generated TypeScript client (DO NOT EDIT)
 ├── scripts/
 │   ├── generate_openapi.py      # Generates OpenAPI spec from Flask routes

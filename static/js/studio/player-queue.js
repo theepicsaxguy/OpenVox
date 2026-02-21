@@ -126,7 +126,8 @@ export function renderQueue() {
         `;
 
         item.addEventListener('click', () => {
-            const { savePosition, loadChunk } = window.playerControls || {};
+            const { savePosition } = window.playerControls || {};
+            const { loadChunk } = window.playerChunk || {};
             if (savePosition) savePosition();
             if (loadChunk) {
                 loadChunk(chunk.chunk_index);
@@ -173,7 +174,8 @@ export function showQueueSheet() {
                 <span class="queue-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : ''}</span>
             `;
             item.addEventListener('click', () => {
-                const { savePosition, loadChunk } = window.playerControls || {};
+                const { savePosition } = window.playerControls || {};
+                const { loadChunk } = window.playerChunk || {};
                 if (savePosition) savePosition();
                 if (loadChunk) {
                     loadChunk(chunk.chunk_index);
