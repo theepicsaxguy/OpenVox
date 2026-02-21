@@ -3,7 +3,7 @@
  * Premium Edition with enhanced visuals
  */
 
-import { client as api } from './api.js';
+import { client as api } from './api.bundle.js';
 import * as state from './state.js';
 import { toast, confirm as confirmDialog } from './main.js';
 import { loadEpisode } from './player.js';

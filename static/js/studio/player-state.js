@@ -2,7 +2,7 @@
  * Player state management - core state and playback control
  */
 
-import { client as api } from './api.js';
+import { client as api } from './api.bundle.js';
 import * as state from './state.js';
 
 let audio = null;

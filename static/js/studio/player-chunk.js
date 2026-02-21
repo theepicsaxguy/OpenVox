@@ -2,7 +2,7 @@
  * Chunk loading and playback
  */
 
-import { client as api, chunkAudioUrl } from './api.js';
+import { client as api, chunkAudioUrl } from './api.bundle.js';
 import * as state from './state.js';
 import * as playerState from './player-state.js';
 import { toast } from './main.js';
