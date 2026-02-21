@@ -59,30 +59,27 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          # When called via workflow_call (e.g., from CI), use the pushed tag or sha
           if [[ "${{ github.event_name }}" == "workflow_call" ]]; then
-            # Check if there's a recent tag
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            LAST_TAG=$(git tag -l 'v*' | sort -V | tail -1 || echo "")
             if [ -n "$LAST_TAG" ]; then
               echo "new_version=${LAST_TAG}" >> "$GITHUB_OUTPUT"
             else
               echo "new_version=sha-${{ github.sha }}" >> "$GITHUB_OUTPUT"
             fi
           else
-            # Get latest tag or use default
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            # Find highest existing tag across ALL branches (not just ancestors of HEAD)
+            LAST_TAG=$(git tag -l 'v*' | sort -V | tail -1)
+            LAST_TAG=${LAST_TAG:-v0.0.0}
             VERSION=${LAST_TAG#v}
-            
-            # Split version
+
             IFS='.' read -ra PARTS <<< "$VERSION"
             MAJOR=${PARTS[0]}
             MINOR=${PARTS[1]:-0}
             PATCH=${PARTS[2]:-0}
-            
-            # Increment patch
+
             NEW_PATCH=$((PATCH + 1))
             NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
-            
+
             echo "Last tag: ${LAST_TAG}"
             echo "New version: ${NEW_VERSION}"
             echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
