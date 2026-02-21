@@ -310,16 +310,21 @@ function renderSubtitles(sentences, activeIndex) {
     const el = $('fs-subtitle-text');
     if (!el || !sentences.length) return;
 
-    const start = Math.max(0, activeIndex - 1);
-    const end = Math.min(sentences.length, activeIndex + 2);
+    const start = Math.max(0, activeIndex - 2);
+    const end = Math.min(sentences.length, activeIndex + 3);
 
     let html = '';
     for (let i = start; i < end; i++) {
         const cls = i === activeIndex ? 'active' : (i < activeIndex ? 'prev' : '');
         const text = escapeForSubtitle(sentences[i]);
-        html += `<span class="subtitle-sentence ${cls}">${text}</span>`;
+        html += `<span class="subtitle-sentence ${cls}" data-idx="${i}">${text}</span>`;
     }
     el.innerHTML = html;
+
+    const activeSentence = el.querySelector('.subtitle-sentence.active');
+    if (activeSentence) {
+        activeSentence.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 function escapeForSubtitle(text) {
