@@ -209,6 +209,13 @@ function initMobileNavigation() {
 
     const navItems = mobileNav.querySelectorAll('.mobile-nav-item');
 
+    const routeToHash = {
+        import: '#import',
+        library: '#library',
+        search: '#search',
+        settings: '#settings',
+    };
+
     function updateActiveRoute() {
         const hash = window.location.hash || '#import';
         let route = 'import';
@@ -231,6 +238,23 @@ function initMobileNavigation() {
             item.classList.toggle('active', item.dataset.route === route);
         });
     }
+
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const targetHash = routeToHash[item.dataset.route];
+            if (!targetHash) return;
+
+            // Close any open bottom sheets / overlays
+            window.closeBottomSheet?.();
+
+            // If already on this hash, force re-route
+            if (window.location.hash === targetHash) {
+                e.preventDefault();
+                handleRoute();
+                updateActiveRoute();
+            }
+        });
+    });
 
     window.addEventListener('hashchange', updateActiveRoute);
     updateActiveRoute();

@@ -1,5 +1,5 @@
 /**
- * Simple pub/sub reactive store.
+ * Simple pub/sub reactive store with immutability enforcement.
  */
 
 const _state = {
@@ -16,12 +16,24 @@ const _state = {
 
 const _listeners = {};
 
+function deepFreeze(obj) {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (Object.isFrozen(obj)) return obj;
+    Object.freeze(obj);
+    for (const val of Object.values(obj)) {
+        if (val !== null && typeof val === 'object') {
+            deepFreeze(val);
+        }
+    }
+    return obj;
+}
+
 export function get(key) {
     return _state[key];
 }
 
 export function set(key, value) {
-    _state[key] = value;
+    _state[key] = deepFreeze(value);
     if (_listeners[key]) {
         for (const fn of _listeners[key]) {
             try { fn(value); } catch (e) { console.error('State listener error:', e); }

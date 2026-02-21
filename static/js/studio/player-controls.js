@@ -9,8 +9,12 @@ import * as playerState from './player-state.js';
 import * as playerChunk from './player-chunk.js';
 
 let saveTimer = null;
+let controlsInitialized = false;
 
 export function initControls() {
+    if (controlsInitialized) return;
+    controlsInitialized = true;
+
     $('player-play').addEventListener('click', togglePlay);
     $('player-skip-back').addEventListener('click', () => skip(-10));
     $('player-skip-fwd').addEventListener('click', () => skip(10));
@@ -19,7 +23,7 @@ export function initControls() {
 
     $('player-scrubber').addEventListener('input', (e) => {
         const audio = playerState.getAudio();
-        if (!audio || !audio.duration) return;
+        if (!audio || !isFinite(audio.duration)) return;
         audio.currentTime = (e.target.value / 100) * audio.duration;
         document.getElementById('scrubber-fill').style.width = `${e.target.value}%`;
     });
@@ -138,7 +142,7 @@ function initKeyboardShortcuts() {
         case '8':
         case '9': {
             const audio = playerState.getAudio();
-            if (audio && audio.duration) {
+            if (audio && isFinite(audio.duration)) {
                 const percent = parseInt(e.key) * 10;
                 audio.currentTime = (percent / 100) * audio.duration;
             }
@@ -176,14 +180,14 @@ export function pause() {
 
 export function skip(secs) {
     const audio = playerState.getAudio();
-    if (!audio) return;
-    audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + secs));
+    if (!audio || !isFinite(audio.duration)) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + secs));
 }
 
 export function seek(time) {
     const audio = playerState.getAudio();
-    if (audio && audio.duration) {
-        audio.currentTime = time;
+    if (audio && isFinite(audio.duration)) {
+        audio.currentTime = Math.max(0, Math.min(audio.duration, time));
     }
 }
 
@@ -284,7 +288,7 @@ function savePosition(forcePct) {
     let pct = forcePct;
     if (pct == null) {
         const audio = playerState.getAudio();
-        const chunkPct = (audio && audio.duration)
+        const chunkPct = (audio && isFinite(audio.duration))
             ? (audio.currentTime / audio.duration)
             : 0;
         pct = totalChunks > 0

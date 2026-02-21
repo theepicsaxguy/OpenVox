@@ -14,7 +14,12 @@ import { createElement, clearContent } from './dom.js';
 
 const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
+let fullscreenInitialized = false;
+
 export function initFullscreenPlayer() {
+    if (fullscreenInitialized) return;
+    fullscreenInitialized = true;
+
     const fullscreenPlayer = $('fullscreen-player');
     if (!fullscreenPlayer) return;
 
@@ -387,7 +392,7 @@ export function updateSubtitles(text) {
 export function updateSubtitlesSync() {
     const audio = playerState.getAudio();
     const currentSubtitleText = playerState.getCurrentSubtitleText();
-    if (!audio || !audio.duration || !currentSubtitleText) return;
+    if (!audio || !isFinite(audio.duration) || !currentSubtitleText) return;
 
     const subtitleTimings = playerState.getSubtitleTimings();
     const subtitleSentences = playerState.getSubtitleSentences();
@@ -491,12 +496,12 @@ export function updateMediaSession() {
     });
 
     const audio = playerState.getAudio();
-    if (audio && audio.duration) {
+    if (audio && isFinite(audio.duration)) {
         try {
             navigator.mediaSession.setPositionState({
                 duration: audio.duration,
                 playbackRate: audio.playbackRate,
-                position: audio.currentTime,
+                position: Math.min(audio.currentTime, audio.duration),
             });
         } catch (err) {
             console.warn('MediaSession position state error:', err.message);
@@ -531,7 +536,7 @@ export function updateTimeDisplays() {
     const currentChunkIndex = playerState.getCurrentChunkIndex();
     const totalDuration = playerState.getTotalDuration();
 
-    if (!audio || !audio.duration) return;
+    if (!audio || !isFinite(audio.duration)) return;
 
     const chunkStartTime = playerState.calculateEpisodeTime(currentChunkIndex);
     playerState.setCurrentTime(chunkStartTime + audio.currentTime);

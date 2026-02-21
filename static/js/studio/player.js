@@ -33,8 +33,11 @@ document.head.appendChild(style);
 let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
+let swipeGesturesInitialized = false;
 
 function initSwipeGestures() {
+    if (swipeGesturesInitialized) return;
+    swipeGesturesInitialized = true;
     const playerContainer = document.getElementById('player-bar');
     const fullscreenPlayer = document.getElementById('fullscreen-player');
 
@@ -127,7 +130,12 @@ export async function loadEpisode(episodeId, startChunk = null) {
     return playerChunk.loadEpisode(episodeId, startChunk);
 }
 
+let playerInitialized = false;
+
 export function init() {
+    if (playerInitialized) return;
+    playerInitialized = true;
+
     playerWaveform.initWaveformBars();
     playerRender.initFullscreenPlayer();
     playerControls.initControls();

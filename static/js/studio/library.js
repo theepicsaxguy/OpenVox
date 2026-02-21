@@ -34,7 +34,12 @@ let isBulkMode = false;
 
 // ── Touch Gestures & Swipe Actions ────────────────────────────────
 
+let touchGesturesInitialized = false;
+
 function initTouchGestures() {
+    if (touchGesturesInitialized) return;
+    touchGesturesInitialized = true;
+
     const tree = document.getElementById('library-tree');
     if (!tree) return;
 
@@ -59,17 +64,20 @@ function initTouchGestures() {
 
         const diffX = touchEndX - touchStartX;
         const diffY = touchEndY - touchStartY;
+        const absX = Math.abs(diffX);
+        const absY = Math.abs(diffY);
 
-        // Horizontal swipe
-        if (Math.abs(diffX) > 80 && Math.abs(diffX) > Math.abs(diffY) * 2) {
+        // Require strong horizontal intent:
+        // - at least 80px horizontal travel
+        // - at most 40px vertical travel (prevents scroll-triggered swipes)
+        // - horizontal distance must dominate vertical by 3:1
+        if (absX > 80 && absY < 40 && absX > absY * 3) {
             const type = touchedElement.dataset.type;
             const id = touchedElement.dataset.id;
 
             if (diffX > 0) {
-                // Swipe right - show actions
                 showSwipeActions(touchedElement, type, id);
             } else {
-                // Swipe left - quick delete or select
                 handleSwipeLeft(touchedElement, type, id);
             }
         }

@@ -159,7 +159,7 @@ function setupAudioEvents(audio) {
 
 function onTimeUpdate() {
     const audio = playerState.getAudio();
-    if (!audio || !audio.duration) return;
+    if (!audio || !isFinite(audio.duration)) return;
 
     const chunks = playerState.getChunks();
     const currentChunkIndex = playerState.getCurrentChunkIndex();
