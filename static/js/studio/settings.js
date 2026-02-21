@@ -196,28 +196,32 @@ function applySubtitleSettings(settings) {
 // ── Init ────────────────────────────────────────────────────────────
 
 export async function init() {
-    // Load voices first and store in state
-    const voices = (await api.getV1Voices()).data;
-    state.set('voices', voices);
+    try {
+        const voiceResponse = await api.getV1Voices();
+        const voices = voiceResponse?.data || voiceResponse || [];
+        state.set('voices', Array.isArray(voices) ? voices : []);
 
-    // Populate voice selects (desktop + mobile)
-    for (const selectId of ['setting-voice', 'setting-voice-mobile']) {
-        const voiceSelect = $(selectId);
-        if (voiceSelect) {
-            voiceSelect.innerHTML = '';
-            for (const v of voices) {
-                const opt = document.createElement('option');
-                opt.value = v.id || v.voice_id;
-                opt.textContent = `${v.name} (${v.type || 'builtin'})`;
-                voiceSelect.appendChild(opt);
+        for (const selectId of ['setting-voice', 'setting-voice-mobile']) {
+            const voiceSelect = $(selectId);
+            if (voiceSelect && Array.isArray(voices)) {
+                voiceSelect.innerHTML = '';
+                for (const v of voices) {
+                    const opt = document.createElement('option');
+                    opt.value = v.id || v.voice_id;
+                    opt.textContent = `${v.name} (${v.type || 'builtin'})`;
+                    voiceSelect.appendChild(opt);
+                }
             }
         }
+    } catch (e) {
+        console.error('Failed to load voices:', e);
+        state.set('voices', []);
     }
 
-    $('btn-save-settings').addEventListener('click', saveSettings);
+    $('btn-save-settings')?.addEventListener('click', saveSettings);
     $('btn-save-settings-mobile')?.addEventListener('click', saveSettings);
 
-    $('btn-create-tag').addEventListener('click', async () => {
+    $('btn-create-tag')?.addEventListener('click', async () => {
         const name = $('new-tag-name').value.trim();
         if (!name) return;
         try {
@@ -243,15 +247,13 @@ export async function init() {
         }
     });
 
-    // Enter key on tag input
-    $('new-tag-name').addEventListener('keydown', (e) => {
+    $('new-tag-name')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            $('btn-create-tag').click();
+            $('btn-create-tag')?.click();
         }
     });
 
-    // Subtitle font size slider live preview
-    $('setting-subtitle-font-size').addEventListener('input', (e) => {
+    $('setting-subtitle-font-size')?.addEventListener('input', (e) => {
         $('subtitle-font-value').textContent = e.target.value + 'px';
     });
 

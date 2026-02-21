@@ -331,7 +331,11 @@ function initNewContentButton() {
 
 function handleRoute() {
     const hash = window.location.hash || '#import';
-    editorRoute(hash);
+    try {
+        editorRoute(hash);
+    } catch (e) {
+        console.error('Route handler error:', e);
+    }
 }
 
 // ── Initialize ripple effect ────────────────────────────────────────
@@ -436,11 +440,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     initBottomSheet();
     initSidebarToggle();
 
-    initEditor();
-    initPlayer();
-    initLibrary();
-    await initSettings();
+    try { initEditor(); } catch (e) { console.error('Editor init failed:', e); }
+    try { initPlayer(); } catch (e) { console.error('Player init failed:', e); }
+    try { initLibrary(); } catch (e) { console.error('Library init failed:', e); }
 
     window.addEventListener('hashchange', handleRoute);
     handleRoute();
+
+    try {
+        await initSettings();
+    } catch (e) {
+        console.error('Settings init failed (routing still works):', e);
+    }
 });
