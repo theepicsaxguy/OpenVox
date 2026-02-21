@@ -181,13 +181,18 @@ test.describe('Issue 2: API Endpoints in UI', () => {
         const errors = [];
         page.on('pageerror', err => errors.push(err.message));
 
-        await page.goto(BASE + '/#settings');
         await page.setViewportSize({ width: 375, height: 812 });
-        await page.waitForTimeout(500);
-
-        await page.fill('#new-tag-name-mobile', 'test-tag-e2e');
-        await page.click('#btn-create-tag-mobile');
+        await page.goto(BASE + '/#settings');
+        await page.waitForLoadState('networkidle');
         await page.waitForTimeout(1500);
+
+        await expect(page.locator('#view-settings')).toHaveClass(/active/);
+
+        const tagInput = page.locator('#new-tag-name-mobile');
+        await tagInput.scrollIntoViewIfNeeded();
+        await tagInput.fill('test-tag-e2e');
+        await page.click('#btn-create-tag-mobile');
+        await page.waitForTimeout(2000);
 
         expect(errors).toHaveLength(0);
     });

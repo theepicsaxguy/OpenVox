@@ -4,10 +4,14 @@ OpenVox - Podcast Studio built on PocketTTS
 Flask application factory and initialization.
 """
 
+import mimetypes
+
 from flask import Flask
 
 from app.config import Config
 from app.logging_config import get_logger, setup_logging
+
+mimetypes.add_type('application/javascript', '.ts')
 
 
 def create_app(config_overrides: dict = None) -> Flask:

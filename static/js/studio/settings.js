@@ -3,7 +3,7 @@
  * Premium Edition
  */
 
-import { client as api } from './api.ts';
+import { client as api } from './api.js';
 import * as state from './state.js';
 import { toast } from './main.js';
 import { $, escapeHtml } from './utils.js';

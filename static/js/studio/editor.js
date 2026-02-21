@@ -3,7 +3,7 @@
  * Premium Edition with enhanced UX
  */
 
-import { client as api, fullEpisodeAudioUrl } from './api.ts';
+import { client as api, fullEpisodeAudioUrl } from './api.js';
 import * as state from './state.js';
 import { toast, confirm as confirmDialog, showUndoToast } from './main.js';
 import { refreshTree } from './library.js';

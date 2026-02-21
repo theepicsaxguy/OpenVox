@@ -2,7 +2,7 @@
  * Player rendering functions - mini player, fullscreen player, UI updates
  */
 
-import { client as api, fullEpisodeAudioUrl } from './api.ts';
+import { client as api, fullEpisodeAudioUrl } from './api.js';
 import { toast } from './main.js';
 import { $, formatTime, triggerHaptic } from './utils.js';
 import * as playerState from './player-state.js';

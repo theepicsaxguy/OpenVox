@@ -2,7 +2,7 @@
  * Player controls - play/pause, seek, volume, speed
  */
 
-import { client as api, chunkAudioUrl } from './api.ts';
+import { client as api, chunkAudioUrl } from './api.js';
 import { $, triggerHaptic } from './utils.js';
 import { toast } from './main.js';
 import * as playerState from './player-state.js';
