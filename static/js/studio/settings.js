@@ -200,15 +200,17 @@ export async function init() {
     const voices = (await api.getV1Voices()).data;
     state.set('voices', voices);
 
-    // Populate voice select
-    const voiceSelect = $('setting-voice');
-    if (voiceSelect) {
-        voiceSelect.innerHTML = '';
-        for (const v of voices) {
-            const opt = document.createElement('option');
-            opt.value = v.id || v.voice_id;
-            opt.textContent = `${v.name} (${v.type || 'builtin'})`;
-            voiceSelect.appendChild(opt);
+    // Populate voice selects (desktop + mobile)
+    for (const selectId of ['setting-voice', 'setting-voice-mobile']) {
+        const voiceSelect = $(selectId);
+        if (voiceSelect) {
+            voiceSelect.innerHTML = '';
+            for (const v of voices) {
+                const opt = document.createElement('option');
+                opt.value = v.id || v.voice_id;
+                opt.textContent = `${v.name} (${v.type || 'builtin'})`;
+                voiceSelect.appendChild(opt);
+            }
         }
     }
 

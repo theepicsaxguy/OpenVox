@@ -205,7 +205,7 @@ body {
 }
 
 .hamburger-btn {
-  display: none;
+  display: none !important;
 }
 
 .window-controls {
@@ -1490,6 +1490,30 @@ input[type="range"]::-moz-range-thumb {
   -webkit-box-orient: vertical;
 }
 
+/* ── Tags Card ───────────────────────────────────────────────────── */
+.tags-card {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.tags-card h4 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: var(--space-4);
+}
+
+.source-tags-list,
+.episode-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  min-height: 28px;
+}
+
 /* ── Source View ──────────────────────────────────────────────────── */
 .source-detail {
   display: flex;
@@ -2686,62 +2710,25 @@ kbd {
 
 @media (max-width: 1024px) {
   .hamburger-btn {
-    display: flex;
+    display: none !important;
   }
-  
+
   .main-content {
     grid-template-columns: 1fr;
   }
-  
+
   .sidebar {
-    position: fixed;
-    top: var(--title-bar-height);
-    left: 0;
-    bottom: 60px;
-    width: var(--sidebar-width);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 50;
-    display: flex;
-    background: var(--bg-secondary);
+    display: none !important;
   }
-  
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  
+
   .sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    top: var(--title-bar-height);
-    background: rgba(0, 0, 0, 0.5);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-    z-index: 40;
+    display: none !important;
   }
-  
-  .sidebar-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  
+
   .drawer {
-    position: fixed;
-    top: var(--title-bar-height);
-    right: 0;
-    bottom: 60px;
-    width: var(--drawer-width);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 50;
-    background: var(--bg-secondary);
+    display: none !important;
   }
-  
-  .drawer.open {
-    transform: translateX(0);
-  }
-  
+
   .review-layout {
     grid-template-columns: 1fr;
     gap: var(--space-4);
@@ -2755,12 +2742,8 @@ kbd {
     border-radius: var(--radius-xl);
   }
 
-  .config-toggle-mobile {
-    display: none;
-  }
-
   .header-actions-mobile {
-    display: none;
+    display: flex;
   }
 
   .btn-generate-mobile {
@@ -2769,24 +2752,6 @@ kbd {
     gap: var(--space-2);
     padding: var(--space-2) var(--space-4);
     font-size: 0.9rem;
-  }
-
-  @media (max-width: 1024px) {
-    .header-actions-mobile {
-      display: flex;
-    }
-  }
-  
-  .player-main {
-    grid-template-columns: 200px 1fr auto;
-    gap: var(--space-4);
-  }
-  
-  .player-scrubber-wrapper {
-    position: static;
-    transform: none;
-    width: auto;
-    grid-column: 1 / -1;
   }
 
   .stage-view {
@@ -2803,10 +2768,6 @@ kbd {
 
   #view-settings.active {
     display: block;
-  }
-
-  .drawer {
-    display: none;
   }
 
   .settings-fullpage {
@@ -2827,7 +2788,7 @@ kbd {
 
 @media (max-width: 768px) {
   .title-bar {
-    height: 36px;
+    display: none;
   }
 
   .window-controls {

@@ -2,7 +2,7 @@
  * Player rendering functions - mini player, fullscreen player, UI updates
  */
 
-import { client as api } from './api.ts';
+import { client as api, fullEpisodeAudioUrl } from './api.ts';
 import { toast } from './main.js';
 import { $, formatTime, triggerHaptic } from './utils.js';
 import * as playerState from './player-state.js';
@@ -180,7 +180,7 @@ function initFullscreenButtons() {
     $('fs-btn-download')?.addEventListener('click', () => {
         const episode = playerState.getCurrentEpisode();
         if (episode) {
-            window.open(api.fullEpisodeAudioUrl(episode.id), '_blank');
+            window.open(fullEpisodeAudioUrl(episode.id), '_blank');
         }
     });
 }
@@ -567,7 +567,7 @@ function showEpisodeMenu(episodeId) {
         {
             label: 'Download Full Episode',
             icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
-            action: () => { window.location.href = api.fullEpisodeAudioUrl(episodeId); }
+            action: () => { window.location.href = fullEpisodeAudioUrl(episodeId); }
         },
         {
             label: 'Regenerate Audio',

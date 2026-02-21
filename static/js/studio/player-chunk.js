@@ -2,7 +2,7 @@
  * Chunk loading and playback
  */
 
-import { client as api } from './api.ts';
+import { client as api, chunkAudioUrl } from './api.ts';
 import * as state from './state.js';
 import * as playerState from './player-state.js';
 import { toast } from './main.js';
@@ -87,7 +87,7 @@ export async function loadChunk(chunkIndex) {
     const chunk = chunks.find(c => c.chunk_index === chunkIndex);
     if (!chunk || !episode) return;
 
-    const url = api.chunkAudioUrl(episode.id, chunkIndex);
+    const url = chunkAudioUrl(episode.id, chunkIndex);
 
     let audio = playerState.getAudio();
     if (!audio) {

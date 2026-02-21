@@ -3,7 +3,7 @@
  * Premium Edition with enhanced UX
  */
 
-import { client as api } from './api.ts';
+import { client as api, fullEpisodeAudioUrl } from './api.ts';
 import * as state from './state.js';
 import { toast, confirm as confirmDialog, showUndoToast } from './main.js';
 import { refreshTree } from './library.js';
@@ -541,6 +541,12 @@ async function loadSource(sourceId) {
         document.getElementById('source-cleaned-text').textContent = source.cleaned_text;
         document.getElementById('source-cleaned-textarea').value = source.cleaned_text;
 
+        // Load and render tags
+        const tagIds = (source.tag_ids || []).map(String);
+        state.set('sourceTagIds', tagIds);
+        renderSourceTags(tagIds);
+        populateTagSelect('source-tag-select', tagIds);
+
     } catch (e) {
         toast(e.message, 'error');
     }
@@ -634,6 +640,28 @@ function initSourceView() {
             refreshTree();
             window.location.hash = '#import';
         }
+    });
+
+    // Source tag management
+    document.getElementById('btn-add-source-tag')?.addEventListener('click', async () => {
+        const sourceId = state.get('currentSourceId');
+        const select = document.getElementById('source-tag-select');
+        const tagId = select?.value;
+        if (!sourceId || !tagId) return;
+
+        const currentTags = state.get('sourceTagIds') || [];
+        if (!currentTags.includes(tagId)) {
+            currentTags.push(tagId);
+            try {
+                await api.postApiStudioSourcesSourceIdTags(sourceId, { tag_ids: currentTags });
+                state.set('sourceTagIds', currentTags);
+                renderSourceTags(currentTags);
+                toast('Tag added', 'success');
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        }
+        select.value = '';
     });
 
     // Generate button - redirect to review view
@@ -758,6 +786,12 @@ function renderEpisode(episode) {
         retryBtn.style.display = 'none';
     }
 
+    // Tags
+    const tagIds = (episode.tag_ids || []).map(String);
+    state.set('episodeTagIds', tagIds);
+    renderEpisodeTags(tagIds);
+    populateTagSelect('episode-tag-select', tagIds);
+
     // Chunks grid
     const container = document.getElementById('episode-chunks');
     clearContent(container);
@@ -851,6 +885,28 @@ function renderEpisode(episode) {
 }
 
 function initEpisodeView() {
+    // Episode tag management
+    document.getElementById('btn-add-episode-tag')?.addEventListener('click', async () => {
+        const episodeId = state.get('currentEpisodeId');
+        const select = document.getElementById('episode-tag-select');
+        const tagId = select?.value;
+        if (!episodeId || !tagId) return;
+
+        const currentTags = state.get('episodeTagIds') || [];
+        if (!currentTags.includes(tagId)) {
+            currentTags.push(tagId);
+            try {
+                await api.postApiStudioEpisodesEpisodeIdTags(episodeId, { tag_ids: currentTags });
+                state.set('episodeTagIds', currentTags);
+                renderEpisodeTags(currentTags);
+                toast('Tag added', 'success');
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        }
+        select.value = '';
+    });
+
     // Regenerate with settings modal
     const regenModal = document.getElementById('regen-settings-modal');
     let currentRegenEpisodeId = null;
@@ -962,7 +1018,7 @@ function initEpisodeView() {
     document.getElementById('btn-download-episode').addEventListener('click', () => {
         const id = state.get('currentEpisodeId');
         if (id) {
-            window.open(api.fullEpisodeAudioUrl(id), '_blank');
+            window.open(fullEpisodeAudioUrl(id), '_blank');
         }
     });
 
@@ -976,6 +1032,76 @@ function initEpisodeView() {
             window.location.hash = '#import';
         }
     });
+}
+
+// ── Tag helpers ─────────────────────────────────────────────────────
+
+function renderSourceTags(tagIds) {
+    const container = document.getElementById('source-tags-list');
+    if (!container) return;
+    container.innerHTML = '';
+    const allTags = state.get('tags') || [];
+    for (const tagId of tagIds) {
+        const tag = allTags.find(t => String(t.id) === String(tagId));
+        if (!tag) continue;
+        const chip = document.createElement('div');
+        chip.className = 'tag-chip';
+        chip.innerHTML = `<span>${escapeHtml(tag.name)}</span><button data-id="${tag.id}" title="Remove">&times;</button>`;
+        chip.querySelector('button').addEventListener('click', async () => {
+            const sourceId = state.get('currentSourceId');
+            const updated = tagIds.filter(id => String(id) !== String(tag.id));
+            try {
+                await api.postApiStudioSourcesSourceIdTags(sourceId, { tag_ids: updated });
+                state.set('sourceTagIds', updated);
+                renderSourceTags(updated);
+                toast('Tag removed', 'info');
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        });
+        container.appendChild(chip);
+    }
+}
+
+function renderEpisodeTags(tagIds) {
+    const container = document.getElementById('episode-tags-list');
+    if (!container) return;
+    container.innerHTML = '';
+    const allTags = state.get('tags') || [];
+    for (const tagId of tagIds) {
+        const tag = allTags.find(t => String(t.id) === String(tagId));
+        if (!tag) continue;
+        const chip = document.createElement('div');
+        chip.className = 'tag-chip';
+        chip.innerHTML = `<span>${escapeHtml(tag.name)}</span><button data-id="${tag.id}" title="Remove">&times;</button>`;
+        chip.querySelector('button').addEventListener('click', async () => {
+            const episodeId = state.get('currentEpisodeId');
+            const updated = tagIds.filter(id => String(id) !== String(tag.id));
+            try {
+                await api.postApiStudioEpisodesEpisodeIdTags(episodeId, { tag_ids: updated });
+                state.set('episodeTagIds', updated);
+                renderEpisodeTags(updated);
+                toast('Tag removed', 'info');
+            } catch (e) {
+                toast(e.message, 'error');
+            }
+        });
+        container.appendChild(chip);
+    }
+}
+
+function populateTagSelect(selectId, excludeIds = []) {
+    const allTags = state.get('tags') || [];
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    select.innerHTML = '<option value="">Add tag...</option>';
+    for (const tag of allTags) {
+        if (excludeIds.includes(String(tag.id))) continue;
+        const opt = document.createElement('option');
+        opt.value = tag.id;
+        opt.textContent = tag.name;
+        select.appendChild(opt);
+    }
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -1026,9 +1152,7 @@ async function initLibraryView() {
     if (!container || !sourcesContainer) return;
 
     try {
-        // Load episodes
-        const episodesRes = await fetch('/api/studio/episodes');
-        const episodes = await episodesRes.json();
+        const episodes = await api.getApiStudioEpisodes();
 
         if (episodes.length === 0) {
             container.innerHTML = '<div class="empty-state"><p>No episodes yet</p></div>';
@@ -1051,9 +1175,7 @@ async function initLibraryView() {
             }
         }
 
-        // Load sources
-        const sourcesRes = await fetch('/api/studio/sources');
-        const sources = await sourcesRes.json();
+        const sources = await api.getApiStudioSources();
 
         if (sources.length === 0) {
             sourcesContainer.innerHTML = '<div class="empty-state"><p>No sources yet</p></div>';
