@@ -6,6 +6,10 @@ import { client as api, fullEpisodeAudioUrl } from './api.bundle.js';
 import { toast } from './main.js';
 import { $, formatTime, triggerHaptic } from './utils.js';
 import * as playerState from './player-state.js';
+import * as playerControls from './player-controls.js';
+import * as playerChunk from './player-chunk.js';
+import * as playerQueue from './player-queue.js';
+import * as playerWaveform from './player-waveform.js';
 
 const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
@@ -16,8 +20,7 @@ export function initFullscreenPlayer() {
     $('fs-btn-minimize').addEventListener('click', closeFullscreenPlayer);
 
     $('fs-btn-play')?.addEventListener('click', () => {
-        const { togglePlay } = window.playerControls || {};
-        if (togglePlay) togglePlay();
+        playerControls.togglePlay();
     });
 
     $('fs-scrubber')?.addEventListener('input', handleFullscreenSeek);
@@ -66,15 +69,12 @@ function handleFullscreenSeek(e) {
         const chunkStartTime = playerState.calculateEpisodeTime(currentChunkIndex);
         audio.currentTime = targetTime - chunkStartTime;
     } else {
-        const { loadChunk } = window.playerChunk || {};
-        if (loadChunk) {
-            loadChunk(targetChunk.chunk_index).then(() => {
-                const chunkStartTime = playerState.calculateEpisodeTime(targetChunk.chunk_index);
-                if (audio) {
-                    audio.currentTime = targetTime - chunkStartTime;
-                }
-            });
-        }
+        playerChunk.loadChunk(targetChunk.chunk_index).then(() => {
+            const chunkStartTime = playerState.calculateEpisodeTime(targetChunk.chunk_index);
+            if (audio) {
+                audio.currentTime = targetTime - chunkStartTime;
+            }
+        });
     }
 
     $('fs-progress-fill').style.width = `${pct}%`;
@@ -130,15 +130,13 @@ function initFullscreenVolume() {
             const audio = playerState.getAudio();
             if (audio) audio.volume = vol;
             localStorage.setItem('pocket_tts_volume', vol);
-            const { updateMuteButton } = window.playerControls || {};
-            if (updateMuteButton) updateMuteButton(vol > 0, fsMuteBtn);
+            playerControls.updateMuteButton(vol > 0, fsMuteBtn);
         });
     }
 
     if (fsMuteBtn) {
         fsMuteBtn.addEventListener('click', () => {
-            const { toggleMute } = window.playerControls || {};
-            if (toggleMute) toggleMute(fsMuteBtn);
+            playerControls.toggleMute(fsMuteBtn);
         });
     }
 }
@@ -149,25 +147,10 @@ function initFullscreenButtons() {
         showEpisodeMenu(episode?.id);
     });
 
-    $('fs-btn-skip-back')?.addEventListener('click', () => {
-        const { skip } = window.playerControls || {};
-        if (skip) skip(-10);
-    });
-
-    $('fs-btn-skip-forward')?.addEventListener('click', () => {
-        const { skip } = window.playerControls || {};
-        if (skip) skip(10);
-    });
-
-    $('fs-btn-prev')?.addEventListener('click', () => {
-        const { prevChunk } = window.playerControls || {};
-        if (prevChunk) prevChunk();
-    });
-
-    $('fs-btn-next')?.addEventListener('click', () => {
-        const { nextChunk } = window.playerControls || {};
-        if (nextChunk) nextChunk();
-    });
+    $('fs-btn-skip-back')?.addEventListener('click', () => playerControls.skip(-10));
+    $('fs-btn-skip-forward')?.addEventListener('click', () => playerControls.skip(10));
+    $('fs-btn-prev')?.addEventListener('click', () => playerControls.prevChunk());
+    $('fs-btn-next')?.addEventListener('click', () => playerControls.nextChunk());
 
     $('fs-btn-sleep')?.addEventListener('click', () => {
         showSleepTimerMenu();
@@ -189,29 +172,27 @@ function handleFullscreenKeydown(e) {
     const isFullscreen = playerState.getIsFullscreen ? playerState.getIsFullscreen() : false;
     if (!isFullscreen) return;
 
-    const { togglePlay, skip, prevChunk, nextChunk } = window.playerControls || {};
-
     switch (e.key) {
     case 'Escape':
         closeFullscreenPlayer();
         break;
     case ' ':
         e.preventDefault();
-        if (togglePlay) togglePlay();
+        playerControls.togglePlay();
         break;
     case 'ArrowLeft':
-        if (skip) skip(-10);
+        playerControls.skip(-10);
         break;
     case 'ArrowRight':
-        if (skip) skip(10);
+        playerControls.skip(10);
         break;
     case 'n':
     case 'N':
-        if (nextChunk) nextChunk();
+        playerControls.nextChunk();
         break;
     case 'p':
     case 'P':
-        if (prevChunk) prevChunk();
+        playerControls.prevChunk();
         break;
     }
 }
@@ -324,13 +305,10 @@ function renderChunkSegments() {
             const chunkIdx = parseInt(seg.dataset.chunk, 10);
             const chunk = chunks[chunkIdx];
             if (chunk) {
-                const { loadChunk } = window.playerChunk || {};
-                if (loadChunk) {
-                    loadChunk(chunk.chunk_index).then(() => {
-                        const audio = playerState.getAudio();
-                        if (audio) audio.play().catch(() => {});
-                    });
-                }
+                playerChunk.loadChunk(chunk.chunk_index).then(() => {
+                    const audio = playerState.getAudio();
+                    if (audio) audio.play().catch((e) => console.warn('Chunk play failed:', e.message));
+                });
             }
         });
     });
@@ -454,10 +432,9 @@ export function showPlayer() {
 
     document.querySelector('.app-shell')?.classList.add('has-player');
 
-    const { drawWaveform, startWaveformAnimation } = window.playerWaveform || {};
     setTimeout(() => {
-        if (drawWaveform) drawWaveform();
-        if (startWaveformAnimation) startWaveformAnimation();
+        playerWaveform.drawWaveform();
+        playerWaveform.startWaveformAnimation();
     }, 100);
 }
 
@@ -481,11 +458,8 @@ export function updatePlayerUI() {
     const numEl = $('player-chunk-num');
     if (numEl) numEl.textContent = `${idx + 1} / ${chunks.length}`;
 
-    const { updatePlayPauseIcon } = window.playerControls || {};
     const audio = playerState.getAudio();
-    if (updatePlayPauseIcon) {
-        updatePlayPauseIcon(!audio?.paused);
-    }
+    playerControls.updatePlayPauseIcon(!audio?.paused);
 
     document.querySelectorAll('.chunk-card').forEach(el => el.classList.remove('playing'));
     const playingCard = document.querySelector(`.chunk-card[data-index="${currentChunkIndex}"]`);
@@ -540,8 +514,7 @@ export function updateNowPlayingView() {
         indicator.classList.toggle('active', !!(audio && !audio.paused));
     }
 
-    const { renderQueue } = window.playerQueue || {};
-    if (renderQueue) renderQueue();
+    playerQueue.renderQueue();
 }
 
 export function updateTimeDisplays() {
@@ -673,8 +646,7 @@ async function showEpisodeListSheet() {
                 `;
                 item.addEventListener('click', () => {
                     window.closeBottomSheet?.();
-                    const { loadEpisode } = window.playerChunk || {};
-                    if (loadEpisode) loadEpisode(episode.id);
+                    playerChunk.loadEpisode(episode.id);
                 });
                 content.appendChild(item);
             });
@@ -736,8 +708,7 @@ export function setSleepTimer(seconds) {
         if (sleepTimerRemaining <= 0) {
             cancelSleepTimer();
             audio?.pause();
-            const { savePosition } = window.playerControls || {};
-            if (savePosition) savePosition();
+            playerControls.savePosition();
             triggerHaptic('success');
             toast('Sleep timer ended', 'info');
         }

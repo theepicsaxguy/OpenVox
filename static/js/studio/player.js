@@ -21,12 +21,6 @@ import * as playerControls from './player-controls.js';
 import * as playerWaveform from './player-waveform.js';
 import * as playerChunk from './player-chunk.js';
 
-window.playerState = playerState;
-window.playerControls = playerControls;
-window.playerQueue = playerQueue;
-window.playerWaveform = playerWaveform;
-window.playerRender = playerRender;
-window.playerChunk = playerChunk;
 
 const style = document.createElement('style');
 style.textContent = `

@@ -2,6 +2,8 @@
  * Waveform visualization - canvas drawing for waveform
  */
 
+import * as playerState from './player-state.js';
+
 let waveformBars = [];
 let waveformAnimationId = null;
 
@@ -43,8 +45,7 @@ export function drawWaveform() {
 
     ctx.clearRect(0, 0, width, height);
 
-    const { getAudio } = window.playerState || {};
-    const audio = getAudio ? getAudio() : null;
+    const audio = playerState.getAudio();
     const isPlaying = audio && !audio.paused;
     const time = Date.now() / 1000;
     const barCount = 30;

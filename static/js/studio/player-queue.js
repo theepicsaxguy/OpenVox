@@ -3,6 +3,9 @@
  */
 
 import * as playerState from './player-state.js';
+import * as playerRender from './player-render.js';
+import * as playerControls from './player-controls.js';
+import * as playerChunk from './player-chunk.js';
 import { formatTime } from './utils.js';
 
 let queue = [];
@@ -94,8 +97,7 @@ export function getPrevInQueue() {
 }
 
 export function showQueue() {
-    const { openFullscreenPlayer } = window.playerRender || {};
-    if (openFullscreenPlayer) openFullscreenPlayer();
+    playerRender.openFullscreenPlayer();
 }
 
 export function renderQueue() {
@@ -127,14 +129,10 @@ export function renderQueue() {
         `;
 
         item.addEventListener('click', () => {
-            const { savePosition } = window.playerControls || {};
-            const { loadChunk } = window.playerChunk || {};
-            if (savePosition) savePosition();
-            if (loadChunk) {
-                loadChunk(chunk.chunk_index);
-                const audio = playerState.getAudio();
-                if (audio) audio.play().catch(() => {});
-            }
+            playerControls.savePosition();
+            playerChunk.loadChunk(chunk.chunk_index);
+            const audio = playerState.getAudio();
+            if (audio) audio.play().catch((e) => console.warn('Queue play failed:', e.message));
         });
 
         queueList.appendChild(item);
@@ -175,14 +173,10 @@ export function showQueueSheet() {
                 <span class="queue-duration">${chunk.duration_secs ? formatTime(chunk.duration_secs) : ''}</span>
             `;
             item.addEventListener('click', () => {
-                const { savePosition } = window.playerControls || {};
-                const { loadChunk } = window.playerChunk || {};
-                if (savePosition) savePosition();
-                if (loadChunk) {
-                    loadChunk(chunk.chunk_index);
-                    const audio = playerState.getAudio();
-                    if (audio) audio.play().catch(() => {});
-                }
+                playerControls.savePosition();
+                playerChunk.loadChunk(chunk.chunk_index);
+                const audio = playerState.getAudio();
+                if (audio) audio.play().catch((e) => console.warn('Queue play failed:', e.message));
                 closeBottomSheet();
             });
             content.appendChild(item);

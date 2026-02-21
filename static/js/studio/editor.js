@@ -8,6 +8,7 @@ import * as state from './state.js';
 import { toast, confirm as confirmDialog, showUndoToast } from './main.js';
 import { refreshTree } from './library.js';
 import { loadEpisode as playerLoadEpisode } from './player.js';
+import { openFullscreenPlayer } from './player-render.js';
 import { escapeHtml, formatTime } from './utils.js';
 import { clearContent, createElement, createPills } from './dom.js';
 
@@ -1134,8 +1135,7 @@ async function populateVoiceSelect(selectId) {
 
 function loadNowPlaying() {
     clearEpisodeRefresh();
-    const { openFullscreenPlayer } = window.playerRender || {};
-    if (openFullscreenPlayer && state.get('playingEpisodeId')) {
+    if (state.get('playingEpisodeId')) {
         openFullscreenPlayer();
     }
     state.set('currentView', 'library');

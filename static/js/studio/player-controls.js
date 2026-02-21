@@ -6,6 +6,7 @@ import { client as api, chunkAudioUrl } from './api.bundle.js';
 import { $, triggerHaptic } from './utils.js';
 import { toast } from './main.js';
 import * as playerState from './player-state.js';
+import * as playerChunk from './player-chunk.js';
 
 let saveTimer = null;
 
@@ -192,12 +193,9 @@ export function prevChunk() {
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx > 0) {
         savePosition();
-        const { loadChunk: chunkLoad } = window.playerChunk || {};
-        if (chunkLoad) {
-            chunkLoad(chunks[idx - 1].chunk_index);
-            const audio = playerState.getAudio();
-            if (audio) audio.play().catch(() => {});
-        }
+        playerChunk.loadChunk(chunks[idx - 1].chunk_index);
+        const audio = playerState.getAudio();
+        if (audio) audio.play().catch((e) => { toast(`Playback failed: ${e.message}`, 'error'); });
     }
 }
 
@@ -207,12 +205,9 @@ export function nextChunk() {
     const idx = chunks.findIndex(c => c.chunk_index === currentChunkIndex);
     if (idx >= 0 && idx < chunks.length - 1) {
         savePosition();
-        const { loadChunk: chunkLoad } = window.playerChunk || {};
-        if (chunkLoad) {
-            chunkLoad(chunks[idx + 1].chunk_index);
-            const audio = playerState.getAudio();
-            if (audio) audio.play().catch(() => {});
-        }
+        playerChunk.loadChunk(chunks[idx + 1].chunk_index);
+        const audio = playerState.getAudio();
+        if (audio) audio.play().catch((e) => { toast(`Playback failed: ${e.message}`, 'error'); });
     }
 }
 

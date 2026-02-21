@@ -5,6 +5,9 @@
 import { client as api, chunkAudioUrl } from './api.bundle.js';
 import * as state from './state.js';
 import * as playerState from './player-state.js';
+import * as playerRender from './player-render.js';
+import * as playerControls from './player-controls.js';
+import * as playerWaveform from './player-waveform.js';
 import { toast } from './main.js';
 import { triggerHaptic } from './utils.js';
 
@@ -47,8 +50,7 @@ export async function loadEpisode(episodeId, startChunk = null) {
         state.set('playingEpisodeId', episode.id);
         state.set('playingChunkIndex', currentChunkIndex);
 
-        const { showPlayer: _showPlayer, updateCoverArt, updateNowPlayingView, updatePlayerUI: _updatePlayerUI } = window.playerRender || {};
-        if (_showPlayer) _showPlayer();
+        playerRender.showPlayer();
 
         const titleEl = document.getElementById('player-title');
         if (titleEl) titleEl.textContent = episode.title;
@@ -58,17 +60,18 @@ export async function loadEpisode(episodeId, startChunk = null) {
         const audio = playerState.getAudio();
         try {
             await audio.play();
-            const { startWaveformAnimation } = window.playerWaveform || {};
-            if (startWaveformAnimation) startWaveformAnimation();
-        } catch {}
+            playerWaveform.startWaveformAnimation();
+        } catch (e) {
+            console.warn('Auto-play blocked:', e.message);
+        }
 
         if (startChunk === null && episode.position_secs) {
             const _chunkDuration = chunks.find(c => c.chunk_index === currentChunkIndex)?.duration_secs || 0;
             audio.currentTime = episode.position_secs;
         }
 
-        if (updateCoverArt) updateCoverArt();
-        if (updateNowPlayingView) updateNowPlayingView();
+        playerRender.updateCoverArt();
+        playerRender.updateNowPlayingView();
 
         return { episode, chunkIndex: currentChunkIndex };
     } catch (e) {
@@ -104,15 +107,12 @@ export async function loadChunk(chunkIndex) {
         audio.playbackRate = parseFloat(savedSpeed);
     }
 
-    const isFullscreen = playerState.getIsFullscreen ? playerState.getIsFullscreen() : false;
-    if (isFullscreen) {
-        const { updateFullscreenUI } = window.playerRender || {};
-        if (updateFullscreenUI) updateFullscreenUI();
+    if (playerState.getIsFullscreen()) {
+        playerRender.updateFullscreenUI();
     }
 
-    const { updatePlayerUI, updateNowPlayingView } = window.playerRender || {};
-    if (updatePlayerUI) updatePlayerUI();
-    if (updateNowPlayingView) updateNowPlayingView();
+    playerRender.updatePlayerUI();
+    playerRender.updateNowPlayingView();
 }
 
 function setupAudioEvents(audio) {
@@ -121,63 +121,39 @@ function setupAudioEvents(audio) {
     audio.addEventListener('loadedmetadata', onMetadataLoaded);
 
     audio.addEventListener('play', () => {
-        const { updatePlayPauseIcon } = window.playerControls || {};
-        if (updatePlayPauseIcon) updatePlayPauseIcon(true);
-
-        const { startWaveformAnimation } = window.playerWaveform || {};
-        if (startWaveformAnimation) startWaveformAnimation();
-
-        const { updateNowPlayingView, updateFullscreenUI } = window.playerRender || {};
-        if (updateNowPlayingView) updateNowPlayingView();
-
-        const isFullscreen = playerState.getIsFullscreen ? playerState.getIsFullscreen() : false;
-        if (isFullscreen && updateFullscreenUI) updateFullscreenUI();
+        playerControls.updatePlayPauseIcon(true);
+        playerWaveform.startWaveformAnimation();
+        playerRender.updateNowPlayingView();
+        if (playerState.getIsFullscreen()) {
+            playerRender.updateFullscreenUI();
+        }
     });
 
     audio.addEventListener('pause', () => {
-        const { updatePlayPauseIcon, savePosition } = window.playerControls || {};
-        if (updatePlayPauseIcon) updatePlayPauseIcon(false);
-
-        const { stopWaveformAnimation, drawWaveform } = window.playerWaveform || {};
-        if (stopWaveformAnimation) stopWaveformAnimation();
-        if (drawWaveform) drawWaveform();
-
-        if (savePosition) savePosition();
-
-        const { updateNowPlayingView, updateFullscreenUI, updateMediaSession } = window.playerRender || {};
-        if (updateNowPlayingView) updateNowPlayingView();
-
-        const isFullscreen = playerState.getIsFullscreen ? playerState.getIsFullscreen() : false;
-        if (isFullscreen && updateFullscreenUI) updateFullscreenUI();
-
-        if (updateMediaSession) updateMediaSession();
+        playerControls.updatePlayPauseIcon(false);
+        playerWaveform.stopWaveformAnimation();
+        playerWaveform.drawWaveform();
+        playerControls.savePosition();
+        playerRender.updateNowPlayingView();
+        if (playerState.getIsFullscreen()) {
+            playerRender.updateFullscreenUI();
+        }
+        playerRender.updateMediaSession();
     });
 
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', () => {
             const audio = playerState.getAudio();
-            if (audio) audio.play().catch(() => {});
+            if (audio) audio.play().catch((e) => console.warn('MediaSession play failed:', e.message));
         });
         navigator.mediaSession.setActionHandler('pause', () => {
             const audio = playerState.getAudio();
             if (audio) audio.pause();
         });
-        navigator.mediaSession.setActionHandler('seekbackward', () => {
-            const { skip } = window.playerControls || {};
-            if (skip) skip(-10);
-        });
-        navigator.mediaSession.setActionHandler('seekforward', () => {
-            const { skip } = window.playerControls || {};
-            if (skip) skip(10);
-        });
-        navigator.mediaSession.setActionHandler('previoustrack', () => {
-            const { prevChunk } = window.playerControls || {};
-            if (prevChunk) prevChunk();
-        });
-        navigator.mediaSession.setActionHandler('nexttrack', () => {
-            const { nextChunk } = window.playerControls || {};
-            if (nextChunk) nextChunk();
-        });
+        navigator.mediaSession.setActionHandler('seekbackward', () => playerControls.skip(-10));
+        navigator.mediaSession.setActionHandler('seekforward', () => playerControls.skip(10));
+        navigator.mediaSession.setActionHandler('previoustrack', () => playerControls.prevChunk());
+        navigator.mediaSession.setActionHandler('nexttrack', () => playerControls.nextChunk());
     }
 }
 
@@ -191,13 +167,11 @@ function onTimeUpdate() {
     const chunkStartTime = playerState.calculateEpisodeTime(currentChunkIndex);
     playerState.setCurrentTime(chunkStartTime + audio.currentTime);
 
-    const { updateTimeDisplays } = window.playerRender || {};
-    if (updateTimeDisplays) updateTimeDisplays();
+    playerRender.updateTimeDisplays();
 }
 
 function onMetadataLoaded() {
-    const { updateMetadataDisplay } = window.playerRender || {};
-    if (updateMetadataDisplay) updateMetadataDisplay();
+    playerRender.updateMetadataDisplay();
 }
 
 function onEnded() {
@@ -214,18 +188,13 @@ function onEnded() {
         const next = chunks[idx + 1];
         loadChunk(next.chunk_index);
         const audio = playerState.getAudio();
-        if (audio) audio.play().catch(() => {});
+        if (audio) audio.play().catch((e) => console.warn('Auto-advance play failed:', e.message));
     } else {
-        const { savePosition, updatePlayPauseIcon } = window.playerControls || {};
-        if (savePosition) savePosition(100);
-        if (updatePlayPauseIcon) updatePlayPauseIcon(false);
-
-        const { stopWaveformAnimation, drawWaveform } = window.playerWaveform || {};
-        if (stopWaveformAnimation) stopWaveformAnimation();
-        if (drawWaveform) drawWaveform();
-
-        const { updateNowPlayingView } = window.playerRender || {};
-        if (updateNowPlayingView) updateNowPlayingView();
+        playerControls.savePosition(100);
+        playerControls.updatePlayPauseIcon(false);
+        playerWaveform.stopWaveformAnimation();
+        playerWaveform.drawWaveform();
+        playerRender.updateNowPlayingView();
 
         triggerHaptic('success');
         toast('Episode complete!', 'success');
