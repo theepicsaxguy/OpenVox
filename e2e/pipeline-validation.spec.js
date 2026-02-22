@@ -3,6 +3,20 @@ import { test, expect } from '@playwright/test';
 
 const BASE = 'http://localhost:49112';
 
+async function navigateTo(page, route) {
+    const routeMap = {
+        'import': '#btn-nav-import, .nav-item[data-route="import"], .mobile-nav-item[data-route="import"]',
+        'library': '#btn-nav-library, .nav-item[data-route="library"], .mobile-nav-item[data-route="library"]',
+        'settings': '#btn-nav-settings, .nav-item[data-route="settings"], .mobile-nav-item[data-route="settings"]',
+        'search': '#btn-nav-search, .nav-item[data-route="search"], .mobile-nav-item[data-route="search"]',
+    };
+    const selector = routeMap[route];
+    if (selector) {
+        await page.click(selector);
+        await page.waitForTimeout(500);
+    }
+}
+
 /**
  * Helper: collect browser console errors during a test.
  * Attach once per page, returns array of error messages.
@@ -122,6 +136,8 @@ test.describe('SPA: Hash Routing Resynchronization', () => {
 // ── Console Error Policy Tests ─────────────────────────────────────
 
 test.describe('Console Error Policy', () => {
+    test.use({ viewport: { width: 375, height: 812 } });
+
     test('no JS errors on full navigation cycle', async ({ page }) => {
         const errors = collectConsoleErrors(page);
 
@@ -129,9 +145,9 @@ test.describe('Console Error Policy', () => {
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(500);
 
-        const routes = ['#import', '#library', '#settings', '#search', '#library', '#import'];
+        const routes = ['import', 'library', 'settings', 'search', 'library', 'import'];
         for (const route of routes) {
-            await page.goto(BASE + '/' + route);
+            await navigateTo(page, route);
             await page.waitForTimeout(400);
         }
 
@@ -149,12 +165,10 @@ test.describe('Console Error Policy', () => {
         await page.waitForLoadState('networkidle');
         await page.waitForTimeout(300);
 
-        // Rapid navigation without waiting
+        // Rapid navigation via actual button clicks
+        const routes = ['import', 'library', 'settings', 'search'];
         for (let i = 0; i < 10; i++) {
-            const routes = ['#import', '#library', '#settings', '#search'];
-            await page.evaluate((hash) => {
-                window.location.hash = hash;
-            }, routes[i % routes.length]);
+            await navigateTo(page, routes[i % routes.length]);
             await page.waitForTimeout(50);
         }
 
@@ -329,8 +343,9 @@ test.describe('Mobile: UI Integrity', () => {
     test('import form works on mobile viewport', async ({ page }) => {
         const errors = collectConsoleErrors(page);
 
-        await page.goto(BASE + '/#import');
+        await page.goto(BASE + '/');
         await page.waitForLoadState('networkidle');
+        await navigateTo(page, 'import');
         await page.waitForTimeout(500);
 
         const textArea = page.locator('#import-text');
@@ -352,8 +367,9 @@ test.describe('Mobile: UI Integrity', () => {
     });
 
     test('settings view renders properly on mobile', async ({ page }) => {
-        await page.goto(BASE + '/#settings');
+        await page.goto(BASE + '/');
         await page.waitForLoadState('networkidle');
+        await navigateTo(page, 'settings');
         await page.waitForTimeout(500);
 
         const settingsView = page.locator('#view-settings');
