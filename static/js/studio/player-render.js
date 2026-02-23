@@ -10,6 +10,7 @@ import * as playerControls from './player-controls.js';
 import * as playerChunk from './player-chunk.js';
 import * as playerQueue from './player-queue.js';
 import * as playerWaveform from './player-waveform.js';
+import * as state from './state.js';
 import { createElement, clearContent } from './dom.js';
 
 const SPEED_STEPS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
@@ -327,6 +328,24 @@ function renderChunkSegments() {
 }
 
 function updateSubtitleDisplay(chunk) {
+    const settings = state.get('settings') || {};
+    const showSubtitles = settings.show_subtitles !== 'false' && settings.show_subtitles !== false;
+    const subtitleMode = settings.subtitle_mode || 'full';
+
+    const container = $('fs-subtitles-container');
+    if (container) {
+        container.style.display = showSubtitles ? 'flex' : 'none';
+    }
+
+    if (!showSubtitles) {
+        playerState.setCurrentSubtitleText('');
+        playerState.setSubtitleSentences([]);
+        playerState.setSubtitleTimings([]);
+        const el = $('fs-subtitle-text');
+        if (el) clearContent(el);
+        return;
+    }
+
     if (chunk && chunk.text) {
         playerState.setCurrentSubtitleText(chunk.text);
         const sentences = chunk.text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
@@ -336,7 +355,12 @@ function updateSubtitleDisplay(chunk) {
             return wordCount / 2.5;
         });
         playerState.setSubtitleTimings(timings);
-        renderKaraoke(sentences, 0, -1);
+
+        if (subtitleMode === 'full') {
+            renderFullText(sentences);
+        } else {
+            renderKaraoke(sentences, 0, -1);
+        }
     } else {
         playerState.setCurrentSubtitleText('');
         playerState.setSubtitleSentences([]);
@@ -354,6 +378,21 @@ function renderKaraokeIdle(message) {
     words.forEach((w, i) => {
         if (i > 0) fragment.appendChild(document.createTextNode(' '));
         fragment.appendChild(createElement('span', { className: 'karaoke-word spoken' }, [w]));
+    });
+    el.appendChild(fragment);
+}
+
+function renderFullText(sentences) {
+    const el = $('fs-subtitle-text');
+    if (!el || !sentences.length) return;
+
+    clearContent(el);
+    const fragment = document.createDocumentFragment();
+    sentences.forEach((sentence, i) => {
+        if (i > 0) {
+            fragment.appendChild(document.createTextNode(' '));
+        }
+        fragment.appendChild(createElement('span', { className: 'full-sentence' }, [sentence]));
     });
     el.appendChild(fragment);
 }
@@ -379,6 +418,12 @@ function renderKaraoke(sentences, sentenceIndex, wordIndex) {
 }
 
 export function updateSubtitles(text) {
+    const settings = state.get('settings') || {};
+    const showSubtitles = settings.show_subtitles !== 'false' && settings.show_subtitles !== false;
+    const subtitleMode = settings.subtitle_mode || 'full';
+
+    if (!showSubtitles) return;
+
     const subtitleEl = $('fs-subtitle-text');
     if (!subtitleEl) return;
     if (!text) {
@@ -386,10 +431,17 @@ export function updateSubtitles(text) {
         return;
     }
     const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
-    renderKaraoke(sentences, 0, -1);
+    if (subtitleMode === 'full') {
+        renderFullText(sentences);
+    } else {
+        renderKaraoke(sentences, 0, -1);
+    }
 }
 
 export function updateSubtitlesSync() {
+    const settings = state.get('settings') || {};
+    const subtitleMode = settings.subtitle_mode || 'full';
+
     const audio = playerState.getAudio();
     const currentSubtitleText = playerState.getCurrentSubtitleText();
     if (!audio || !isFinite(audio.duration) || !currentSubtitleText) return;
@@ -418,10 +470,13 @@ export function updateSubtitlesSync() {
     const timeInSentence = currentTime - sentenceStart;
     const progress = Math.max(0, Math.min(1, timeInSentence / sentenceDuration));
 
-    const words = sentence.split(/\s+/);
-    const activeWordIndex = Math.floor(progress * words.length);
-
-    renderKaraoke(subtitleSentences, currentSentenceIndex, activeWordIndex);
+    if (subtitleMode === 'full') {
+        renderFullText(subtitleSentences);
+    } else {
+        const words = sentence.split(/\s+/);
+        const activeWordIndex = Math.floor(progress * words.length);
+        renderKaraoke(subtitleSentences, currentSentenceIndex, activeWordIndex);
+    }
 }
 
 export function updateCoverArt() {
