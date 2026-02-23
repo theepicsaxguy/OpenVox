@@ -256,7 +256,7 @@ class ChunkRepository:
     @staticmethod
     def get_by_episode(db: sqlite3.Connection, episode_id: str) -> list[sqlite3.Row]:
         return db.execute(
-            'SELECT id, chunk_index, text, audio_path, duration_secs, status, error_message '
+            'SELECT id, chunk_index, text, audio_path, duration_secs, status, error_message, word_timings '
             'FROM chunks WHERE episode_id = ? ORDER BY chunk_index',
             (episode_id,),
         ).fetchall()

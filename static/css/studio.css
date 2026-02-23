@@ -1929,6 +1929,13 @@ input[type="range"]::-moz-range-thumb {
   margin-bottom: var(--space-2);
 }
 
+.setting-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: var(--space-1);
+}
+
 .setting-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

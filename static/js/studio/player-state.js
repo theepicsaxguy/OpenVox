@@ -156,9 +156,18 @@ export function setSubtitleTimings(timings) {
     subtitleTimings = timings;
 }
 
+export function getWordTimings() {
+    return wordTimings;
+}
+
+export function setWordTimings(timings) {
+    wordTimings = timings;
+}
+
 let currentSubtitleText = '';
 let subtitleSentences = [];
 let subtitleTimings = [];
+let wordTimings = [];
 
 export function getIsMuted() {
     return isMuted;

@@ -144,6 +144,8 @@ def register_routes(bp) -> None:
     @bp.route('/episodes/<episode_id>', methods=['GET'])
     def get_episode(episode_id: str) -> Response | tuple[Response, int]:
         """Get episode with its chunks."""
+        import json
+
         db = get_db()
         episode = EpisodeRepository.get_with_playback(db, episode_id)
         if not episode:
@@ -152,7 +154,16 @@ def register_routes(bp) -> None:
         chunks = ChunkRepository.get_by_episode(db, episode_id)
 
         result = dict(episode)
-        result['chunks'] = [dict(c) for c in chunks]
+        chunks_list = []
+        for c in chunks:
+            chunk_dict = dict(c)
+            if chunk_dict.get('word_timings'):
+                try:
+                    chunk_dict['word_timings'] = json.loads(chunk_dict['word_timings'])
+                except json.JSONDecodeError:
+                    chunk_dict['word_timings'] = []
+            chunks_list.append(chunk_dict)
+        result['chunks'] = chunks_list
         return jsonify(result)
 
     @bp.route('/episodes/<episode_id>', methods=['PUT'])

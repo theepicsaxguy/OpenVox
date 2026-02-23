@@ -164,6 +164,10 @@ MIGRATIONS = [
     """
     ALTER TABLE sources ADD COLUMN cover_art TEXT;
     """,
+    # Migration 5: Add word_timings to chunks
+    """
+    ALTER TABLE chunks ADD COLUMN word_timings TEXT;
+    """,
 ]
 
 
@@ -212,6 +216,7 @@ def init_db() -> None:
         ('clean_handle_tables', 'true'),
         ('clean_speak_urls', 'true'),
         ('clean_expand_abbreviations', 'true'),
+        ('hf_token', ''),
     ]
     conn.executemany('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', default_settings)
 

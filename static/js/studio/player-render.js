@@ -350,6 +350,52 @@ function updateSubtitleDisplay(chunk) {
         playerState.setCurrentSubtitleText(chunk.text);
         const sentences = chunk.text.split(/(?<=[.!?])\s+/).filter(s => s.trim());
         playerState.setSubtitleSentences(sentences);
+
+        // Use accurate word timings from backend if available
+        if (chunk.word_timings && chunk.word_timings.length > 0) {
+            playerState.setWordTimings(chunk.word_timings);
+
+            // Calculate sentence timings from word timings
+            const sentenceTimings = [];
+            let currentSentence = '';
+            let currentStart = 0;
+
+            for (const wt of chunk.word_timings) {
+                currentSentence += (currentSentence ? ' ' : '') + wt.word;
+                if (wt.word.endsWith('.') || wt.word.endsWith('!') || wt.word.endsWith('?')) {
+                    const sentIdx = sentences.indexOf(currentSentence);
+                    if (sentIdx >= 0) {
+                        sentenceTimings[sentIdx] = wt.end - currentStart;
+                        currentStart = wt.end;
+                        currentSentence = '';
+                    }
+                }
+            }
+            // Handle last sentence without punctuation
+            if (currentSentence) {
+                const sentIdx = sentences.indexOf(currentSentence);
+                if (sentIdx >= 0 && chunk.word_timings.length > 0) {
+                    sentenceTimings[sentIdx] = chunk.word_timings[chunk.word_timings.length - 1].end - currentStart;
+                }
+            }
+            // Fill any gaps with estimated timing
+            for (let i = 0; i < sentences.length; i++) {
+                if (sentenceTimings[i] === undefined) {
+                    const wordCount = sentences[i].split(/\s+/).length;
+                    sentenceTimings[i] = wordCount / 2.5;
+                }
+            }
+            playerState.setSubtitleTimings(sentenceTimings);
+        } else {
+            // Fallback: estimate based on word count
+            playerState.setWordTimings([]);
+            const timings = sentences.map(s => {
+                const wordCount = s.split(/\s+/).length;
+                return wordCount / 2.5;
+            });
+            playerState.setSubtitleTimings(timings);
+        }
+        renderKaraoke(sentences, 0, -1);
         const timings = sentences.map(s => {
             const wordCount = s.split(/\s+/).length;
             return wordCount / 2.5;
@@ -365,6 +411,7 @@ function updateSubtitleDisplay(chunk) {
         playerState.setCurrentSubtitleText('');
         playerState.setSubtitleSentences([]);
         playerState.setSubtitleTimings([]);
+        playerState.setWordTimings([]);
         renderKaraokeIdle('Waiting for audio...');
     }
 }
@@ -439,15 +486,13 @@ export function updateSubtitles(text) {
 }
 
 export function updateSubtitlesSync() {
-    const settings = state.get('settings') || {};
-    const subtitleMode = settings.subtitle_mode || 'full';
-
     const audio = playerState.getAudio();
     const currentSubtitleText = playerState.getCurrentSubtitleText();
     if (!audio || !isFinite(audio.duration) || !currentSubtitleText) return;
 
     const subtitleTimings = playerState.getSubtitleTimings();
     const subtitleSentences = playerState.getSubtitleSentences();
+    const wordTimings = playerState.getWordTimings();
 
     const currentTime = audio.currentTime;
     let elapsedTime = 0;
@@ -465,18 +510,39 @@ export function updateSubtitlesSync() {
     const sentence = subtitleSentences[currentSentenceIndex];
     if (!sentence) return;
 
-    const sentenceStart = subtitleTimings.slice(0, currentSentenceIndex).reduce((a, b) => a + b, 0);
-    const sentenceDuration = subtitleTimings[currentSentenceIndex] || 1;
-    const timeInSentence = currentTime - sentenceStart;
-    const progress = Math.max(0, Math.min(1, timeInSentence / sentenceDuration));
+    let relativeWordIndex = 0;
 
-    if (subtitleMode === 'full') {
-        renderFullText(subtitleSentences);
+    // Use accurate word timings if available
+    if (wordTimings && wordTimings.length > 0) {
+        // Find which word is active based on actual timing
+        for (let i = 0; i < wordTimings.length; i++) {
+            if (wordTimings[i].start <= currentTime && currentTime < wordTimings[i].end) {
+                relativeWordIndex = i;
+                break;
+            }
+            if (wordTimings[i].end <= currentTime) {
+                relativeWordIndex = i;
+            }
+        }
+        // Convert to relative index within the current sentence
+        let wordCountBeforeSentence = 0;
+        for (let i = 0; i < currentSentenceIndex; i++) {
+            const sentWords = subtitleSentences[i].split(/\s+/).length;
+            wordCountBeforeSentence += sentWords;
+        }
+        relativeWordIndex = Math.max(0, relativeWordIndex - wordCountBeforeSentence);
     } else {
+        // Fallback: estimate based on linear progress
+        const sentenceStart = subtitleTimings.slice(0, currentSentenceIndex).reduce((a, b) => a + b, 0);
+        const sentenceDuration = subtitleTimings[currentSentenceIndex] || 1;
+        const timeInSentence = currentTime - sentenceStart;
+        const progress = Math.max(0, Math.min(1, timeInSentence / sentenceDuration));
+
         const words = sentence.split(/\s+/);
-        const activeWordIndex = Math.floor(progress * words.length);
-        renderKaraoke(subtitleSentences, currentSentenceIndex, activeWordIndex);
+        relativeWordIndex = Math.floor(progress * words.length);
     }
+
+    renderKaraoke(subtitleSentences, currentSentenceIndex, relativeWordIndex);
 }
 
 export function updateCoverArt() {

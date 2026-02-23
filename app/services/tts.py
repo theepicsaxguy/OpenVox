@@ -11,11 +11,21 @@ import torch
 
 from app.config import Config
 from app.logging_config import get_logger
+from app.studio.db import get_db
 
 logger = get_logger('tts')
 
 # Lazy import pocket_tts to allow for better error handling
 TTSModel = None
+
+
+def _get_hf_token_from_settings() -> str | None:
+    """Get HuggingFace token from user settings (DB), with env var as fallback."""
+    db = get_db()
+    row = db.execute("SELECT value FROM settings WHERE key = 'hf_token'").fetchone()
+    if row and row['value']:
+        return row['value']
+    return os.environ.get('HF_TOKEN')
 
 
 def _ensure_pocket_tts():
@@ -28,6 +38,16 @@ def _ensure_pocket_tts():
             TTSModel = _TTSModel
         except ImportError as exc:
             raise ImportError('pocket-tts not found. Install with: pip install pocket-tts') from exc
+
+
+def _configure_hf_token():
+    """Configure HuggingFace token for model/voice downloads."""
+    token = _get_hf_token_from_settings()
+    if token:
+        os.environ['HF_TOKEN'] = token
+        logger.debug('HuggingFace token configured from settings')
+    elif 'HF_TOKEN' in os.environ:
+        logger.debug('Using HF_TOKEN from environment')
 
 
 class TTSService:
@@ -69,6 +89,7 @@ class TTSService:
             model_path: Optional path to model file or variant name
         """
         _ensure_pocket_tts()
+        _configure_hf_token()
 
         logger.info('Loading Pocket TTS model...')
         t0 = time.time()
@@ -133,6 +154,8 @@ class TTSService:
         """
         if not self.is_loaded:
             raise RuntimeError('Model not loaded. Call load_model() first.')
+
+        _configure_hf_token()
 
         # Resolve the voice path
         resolved_key = self._resolve_voice_path(voice_id_or_path)

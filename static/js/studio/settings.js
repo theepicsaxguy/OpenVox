@@ -30,6 +30,7 @@ function applyToForm(settings) {
     if (settings.default_code_rule) $('setting-code-rule').value = settings.default_code_rule;
     if (settings.default_breathing) $('setting-breathing').value = settings.default_breathing;
     if (settings.url_extraction_method) $('setting-url-extraction').value = settings.url_extraction_method;
+    if (settings.hf_token) $('setting-hf-token').value = settings.hf_token;
 
     const bool = (key, def = false) => {
         const val = settings[key];
@@ -58,6 +59,7 @@ function applyToForm(settings) {
     if (settings.default_code_rule) $('setting-code-rule-mobile').value = settings.default_code_rule;
     if (settings.default_breathing) $('setting-breathing-mobile').value = settings.default_breathing;
     if (settings.url_extraction_method) $('setting-url-extraction-mobile').value = settings.url_extraction_method;
+    if (settings.hf_token) $('setting-hf-token-mobile').value = settings.hf_token;
 
     $('setting-clean-remove-non-text-mobile').checked = bool('clean_remove_non_text', false);
     $('setting-clean-speak-urls-mobile').checked = bool('clean_speak_urls', true);
@@ -84,6 +86,7 @@ async function saveSettings() {
         default_code_rule: $('setting-code-rule').value || $('setting-code-rule-mobile').value,
         default_breathing: $('setting-breathing').value || $('setting-breathing-mobile').value,
         url_extraction_method: $('setting-url-extraction').value || $('setting-url-extraction-mobile').value,
+        hf_token: $('setting-hf-token').value || $('setting-hf-token-mobile').value,
 
         clean_remove_non_text: $('setting-clean-remove-non-text').checked ? 'true' : 'false',
         clean_speak_urls: $('setting-clean-speak-urls').checked ? 'true' : 'false',

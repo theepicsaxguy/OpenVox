@@ -335,6 +335,8 @@ Avoid:
 
 3. **Recovery from Server Crashes**: For long-running background operations (like audio generation), implement startup recovery that resets stuck/inconsistent states to known good values.
 
+4. **ALWAYS regenerate API client**: After ANY backend change (new route, modified response, new field, etc.), you MUST run `pnpm run client:generate` before committing. CI will fail if the generated client is out of sync with the backend.
+
 ## Auto-Generated API Client (OpenAPI + Orval)
 
 This project uses a **fully auto-generated API client** - NO manual API calls allowed.
@@ -363,10 +365,10 @@ pnpm run client:generate
 
 ### Rules (STRICT - DO NOT BREAK)
 
-1. **NEVER write manual API calls** - All HTTP requests must go through the generated client
-2. **NEVER create/edit `static/js/studio/api.js`** - It was deleted for a reason
-3. **NEVER create manual fetch/axios wrappers** - Use `api.ts` only
-4. **After adding/modifying ANY backend route**, run `pnpm run client:generate` to update the client
+1. **ALWAYS regenerate API client**: After ANY backend change (new route, modified response, new field, etc.), you MUST run `pnpm run client:generate` before committing. CI will fail if the generated client is out of sync with the backend.
+2. **NEVER write manual API calls** - All HTTP requests must go through the generated client
+3. **NEVER create/edit `static/js/studio/api.js`** - It was deleted for a reason
+4. **NEVER create manual fetch/axios wrappers** - Use `api.ts` only
 5. **Import from `api.ts`**, not from `client.ts` directly:
    ```javascript
    import { client as api } from './api.ts';

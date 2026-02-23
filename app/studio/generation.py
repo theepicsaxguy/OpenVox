@@ -2,6 +2,7 @@
 Background audio generation queue — single-worker thread processing episodes sequentially.
 """
 
+import json
 import os
 import queue
 import sqlite3
@@ -15,6 +16,74 @@ from app.studio.breathing import add_breathing
 logger = get_logger('studio.generation')
 
 _generation_queue = None
+
+
+def calculate_word_timings(text: str, duration_secs: float) -> list[dict]:
+    """
+    Estimate word timings based on word length ratio.
+
+    Longer words take more time to speak. This is a simple but reasonably
+    accurate approach that doesn't require running whisper alignment.
+
+    Args:
+        text: The text that was spoken
+        duration_secs: Total duration of the audio in seconds
+
+    Returns:
+        List of dicts with 'word', 'start', 'end' keys
+    """
+    import re
+
+    # Split into sentences (preserving punctuation)
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+
+    if not sentences:
+        return []
+
+    # Calculate timing per sentence first
+    sentence_timings = []
+    for sent in sentences:
+        words_in_sent = sent.split()
+        if not words_in_sent:
+            continue
+
+        # Calculate char count (excluding spaces)
+        char_count = sum(len(w) for w in words_in_sent)
+        if char_count == 0:
+            continue
+
+        # Each word's share is proportional to its character count
+        sent_duration = (char_count / len(text)) * duration_secs if len(text) > 0 else 0
+
+        word_timings_in_sent = []
+        current_time = 0
+
+        for word in words_in_sent:
+            word_chars = len(word)
+            word_ratio = word_chars / char_count if char_count > 0 else 0
+            word_duration = sent_duration * word_ratio
+
+            word_timings_in_sent.append(
+                {'word': word, 'start': current_time, 'end': current_time + word_duration}
+            )
+            current_time += word_duration
+
+        sentence_timings.append(word_timings_in_sent)
+
+    # Flatten and adjust timing
+    result = []
+    base_time = 0
+
+    for sent_timing in sentence_timings:
+        for wt in sent_timing:
+            result.append(
+                {'word': wt['word'], 'start': base_time + wt['start'], 'end': base_time + wt['end']}
+            )
+        if sent_timing:
+            base_time = sent_timing[-1]['end']
+
+    return result
 
 
 class GenerationQueue:
@@ -222,12 +291,16 @@ class GenerationQueue:
                     duration = num_samples / tts.sample_rate
                     total_duration += duration
 
+                    # Calculate word timings
+                    word_timings = calculate_word_timings(chunk_text, duration)
+                    word_timings_json = json.dumps(word_timings)
+
                     # Update chunk
                     relative_path = f'{episode_id}/{audio_filename}'
                     db.execute(
-                        'UPDATE chunks SET status = ?, audio_path = ?, duration_secs = ? '
+                        'UPDATE chunks SET status = ?, audio_path = ?, duration_secs = ?, word_timings = ? '
                         'WHERE id = ?',
-                        ('ready', relative_path, duration, chunk_id),
+                        ('ready', relative_path, duration, word_timings_json, chunk_id),
                     )
                     db.commit()
 
