@@ -354,12 +354,12 @@ function updateSubtitleDisplay(chunk) {
         // Use accurate word timings from backend if available
         if (chunk.word_timings && chunk.word_timings.length > 0) {
             playerState.setWordTimings(chunk.word_timings);
-            
+
             // Calculate sentence timings from word timings
             const sentenceTimings = [];
             let currentSentence = '';
             let currentStart = 0;
-            
+
             for (const wt of chunk.word_timings) {
                 currentSentence += (currentSentence ? ' ' : '') + wt.word;
                 if (wt.word.endsWith('.') || wt.word.endsWith('!') || wt.word.endsWith('?')) {
@@ -486,9 +486,6 @@ export function updateSubtitles(text) {
 }
 
 export function updateSubtitlesSync() {
-    const settings = state.get('settings') || {};
-    const subtitleMode = settings.subtitle_mode || 'full';
-
     const audio = playerState.getAudio();
     const currentSubtitleText = playerState.getCurrentSubtitleText();
     if (!audio || !isFinite(audio.duration) || !currentSubtitleText) return;
@@ -546,13 +543,6 @@ export function updateSubtitlesSync() {
     }
 
     renderKaraoke(subtitleSentences, currentSentenceIndex, relativeWordIndex);
-    if (subtitleMode === 'full') {
-        renderFullText(subtitleSentences);
-    } else {
-        const words = sentence.split(/\s+/);
-        const activeWordIndex = Math.floor(progress * words.length);
-        renderKaraoke(subtitleSentences, currentSentenceIndex, activeWordIndex);
-    }
 }
 
 export function updateCoverArt() {
